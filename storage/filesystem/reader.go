@@ -21,7 +21,7 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	timeDirs, err := os.ReadDir("data")
+	timeDirs, err := os.ReadDir(DataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 		if !timeDir.IsDir() {
 			continue
 		}
-		hashDirs, err := os.ReadDir(fmt.Sprintf("data/%s", timeDir.Name()))
+		hashDirs, err := os.ReadDir(fmt.Sprintf("%s/%s", DataDir, timeDir.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +42,7 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 				continue
 			}
 			err := func() error {
-				f, err := os.Open(fmt.Sprintf("data/%s/%s/chunk.jsonl", timeDir.Name(), hashDir.Name()))
+				f, err := os.Open(fmt.Sprintf("%s/%s/%s/%s", DataDir, timeDir.Name(), hashDir.Name(), ChunkFile))
 				if err != nil {
 					return err
 				}

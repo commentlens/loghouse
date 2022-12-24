@@ -11,6 +11,12 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
+const (
+	DataDir   = "data"
+	TimeDir   = "2006-01-02-15"
+	ChunkFile = "chunk.jsonl"
+)
+
 func NewWriter() storage.Writer {
 	return &writer{}
 }
@@ -40,12 +46,12 @@ func HashLabels(labels map[string]string) (string, error) {
 }
 
 func LogEntryDir(e *storage.LogEntry) (string, error) {
-	timeDir := e.Time.Format("2006-01-02-15")
+	timeDir := e.Time.UTC().Format(TimeDir)
 	hashDir, err := HashLabels(e.Labels)
 	if err != nil {
 		return "", err
 	}
-	dir := fmt.Sprintf("data/%s/%s", timeDir, hashDir)
+	dir := fmt.Sprintf("%s/%s/%s", DataDir, timeDir, hashDir)
 	return dir, nil
 }
 
@@ -69,7 +75,7 @@ func (w *writer) Write(es []*storage.LogEntry) error {
 					return err
 				}
 			}
-			chunkFile := fmt.Sprintf("%s/chunk.jsonl", dir)
+			chunkFile := fmt.Sprintf("%s/%s", dir, ChunkFile)
 
 			f, err := os.OpenFile(chunkFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 			if err != nil {

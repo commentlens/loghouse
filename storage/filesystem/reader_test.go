@@ -10,7 +10,7 @@ import (
 )
 
 func TestReader(t *testing.T) {
-	os.RemoveAll("data/")
+	os.RemoveAll(DataDir)
 
 	w := NewWriter()
 
