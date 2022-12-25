@@ -1,26 +1,121 @@
 package filesystem
 
 import (
-	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/commentlens/loghouse/storage"
+	"github.com/klauspost/compress/s2"
+	"github.com/oklog/ulid/v2"
 )
 
 const (
 	CompactDir       = "data/compact"
+	CompactIndexDir  = "index"
+	CompactBlobDir   = "blob"
 	CompactMaxAge    = time.Hour
 	CompactMaxSize   = 1024 * 1024 * 100
-	CompactMaxLine   = 1_000_000
 	CompactChunkFile = "chunk.jsonl.tmp"
 )
 
 type compactor struct{}
 
+type compactIndex struct {
+	Labels       map[string]string
+	Start        time.Time
+	End          time.Time
+	EntriesTotal uint64
+	BytesTotal   uint64
+}
+
+func (c *compactor) writeChunks(chunks []string) error {
+	compactID := ulid.Make()
+	var bytesTotal uint64
+	for _, chunk := range chunks {
+		r := NewReader([]string{chunk})
+		es, err := r.Read(&storage.ReadOptions{})
+		if err != nil {
+			return err
+		}
+		if len(es) == 0 {
+			continue
+		}
+		buf := new(bytes.Buffer)
+		enc := s2.NewWriter(buf)
+		w := json.NewEncoder(enc)
+		for _, e := range es {
+			err := w.Encode(e.Data)
+			if err != nil {
+				return err
+			}
+		}
+		err = enc.Close()
+		if err != nil {
+			return err
+		}
+		err = func() error {
+			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, CompactBlobDir), 0777)
+			if err != nil {
+				return err
+			}
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, CompactBlobDir, compactID), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = f.Write(buf.Bytes())
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+		err = func() error {
+			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, CompactIndexDir), 0777)
+			if err != nil {
+				return err
+			}
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, CompactIndexDir, compactID), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			return json.NewEncoder(f).Encode(&compactIndex{
+				Labels:       es[0].Labels,
+				Start:        es[0].Time,
+				End:          es[len(es)-1].Time,
+				EntriesTotal: uint64(len(es)),
+				BytesTotal:   uint64(buf.Len()),
+			})
+		}()
+		if err != nil {
+			return err
+		}
+		bytesTotal += uint64(buf.Len())
+		if bytesTotal < CompactMaxSize {
+			continue
+		}
+		compactID = ulid.Make()
+		bytesTotal = 0
+	}
+	return nil
+}
+
 func (c *compactor) compact() error {
 	chunks, err := ListChunks(CompactChunkFile)
+	if err != nil {
+		return err
+	}
+	err = c.writeChunks(chunks)
 	if err != nil {
 		return err
 	}
@@ -29,6 +124,10 @@ func (c *compactor) compact() error {
 		if err != nil {
 			return err
 		}
+	}
+	err = removeEmptyDir(WriteDir, CompactMaxAge)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -46,29 +145,7 @@ func (c *compactor) Compact() error {
 	if err != nil {
 		return err
 	}
-	err = removeEmptyDir(WriteDir, CompactMaxAge)
-	if err != nil {
-		return err
-	}
 	return nil
-}
-
-func countChunkLines(chunk string) (uint64, error) {
-	var count uint64
-	f, err := os.Open(chunk)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		count += 1
-	}
-	err = scanner.Err()
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
 }
 
 func chunkCompactible(chunk string) (bool, error) {
@@ -82,18 +159,11 @@ func chunkCompactible(chunk string) (bool, error) {
 	if finfo.Size() >= CompactMaxSize {
 		return true, nil
 	}
-	count, err := countChunkLines(chunk)
-	if err != nil {
-		return false, err
-	}
-	if count >= CompactMaxLine {
-		return true, nil
-	}
 	return false, nil
 }
 
 func swapChunk() error {
-	chunks, err := ListChunks(CompactChunkFile)
+	chunks, err := ListChunks(WriteChunkFile)
 	if err != nil {
 		return err
 	}

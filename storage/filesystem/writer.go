@@ -3,7 +3,6 @@ package filesystem
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -66,30 +65,19 @@ func (w *writer) write(e *storage.LogEntry) error {
 	if err != nil {
 		return err
 	}
-
-	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(dir, 0777)
-		if err != nil {
-			return err
-		}
+	err = os.MkdirAll(dir, 0777)
+	if err != nil {
+		return err
 	}
 	chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 
-	f, err := os.OpenFile(chunkFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	f, err := os.OpenFile(chunkFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	entryJSON, err := json.Marshal(e)
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(fmt.Sprintf("%s\n", entryJSON))
-	if err != nil {
-		return err
-	}
-	return nil
+	return json.NewEncoder(f).Encode(e)
 }
 
 func (w *writer) Write(es []*storage.LogEntry) error {
