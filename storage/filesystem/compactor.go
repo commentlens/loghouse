@@ -25,6 +25,14 @@ const (
 
 type compactor struct{}
 
+func (*compactor) Compact() error {
+	return compact()
+}
+
+func (*compactor) SwapChunk() error {
+	return swapChunk()
+}
+
 type compactIndex struct {
 	Labels       map[string]string
 	Start        time.Time
@@ -33,7 +41,7 @@ type compactIndex struct {
 	BytesTotal   uint64
 }
 
-func (c *compactor) writeChunks(chunks []string) error {
+func writeChunks(chunks []string) error {
 	compactID := ulid.Make()
 	var bytesTotal uint64
 	for _, chunk := range chunks {
@@ -110,12 +118,12 @@ func (c *compactor) writeChunks(chunks []string) error {
 	return nil
 }
 
-func (c *compactor) compact() error {
+func compact() error {
 	chunks, err := ListChunks(CompactChunkFile)
 	if err != nil {
 		return err
 	}
-	err = c.writeChunks(chunks)
+	err = writeChunks(chunks)
 	if err != nil {
 		return err
 	}
@@ -126,22 +134,6 @@ func (c *compactor) compact() error {
 		}
 	}
 	err = removeEmptyDir(WriteDir, CompactMaxAge)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *compactor) Compact() error {
-	err := c.compact()
-	if err != nil {
-		return err
-	}
-	err = swapChunk()
-	if err != nil {
-		return err
-	}
-	err = c.compact()
 	if err != nil {
 		return err
 	}

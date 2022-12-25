@@ -72,6 +72,8 @@ func TestCompactor(t *testing.T) {
 	require.NoError(t, err)
 
 	c := compactor{}
+	err = c.SwapChunk()
+	require.NoError(t, err)
 	err = c.Compact()
 	require.NoError(t, err)
 
@@ -84,6 +86,8 @@ func TestCompactor(t *testing.T) {
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
+	err = c.SwapChunk()
+	require.NoError(t, err)
 	err = c.Compact()
 	require.NoError(t, err)
 
@@ -95,6 +99,8 @@ func TestCompactor(t *testing.T) {
 	require.Len(t, dataAfterCompact, 5)
 
 	err = markChunkCompactible()
+	require.NoError(t, err)
+	err = c.SwapChunk()
 	require.NoError(t, err)
 	err = c.Compact()
 	require.NoError(t, err)
