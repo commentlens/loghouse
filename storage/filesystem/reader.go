@@ -3,46 +3,32 @@ package filesystem
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/commentlens/loghouse/storage"
 )
 
 func ListChunks(chunkFileName string) ([]string, error) {
-	var chunks []string
-	timeDirs, err := os.ReadDir(WriteDir)
+	var paths []string
+	err := filepath.WalkDir(WriteDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if d.Name() != chunkFileName {
+			return nil
+		}
+		paths = append(paths, path)
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	for _, timeDir := range timeDirs {
-		if !timeDir.IsDir() {
-			continue
-		}
-		hashDirs, err := os.ReadDir(fmt.Sprintf("%s/%s", WriteDir, timeDir.Name()))
-		if err != nil {
-			return nil, err
-		}
-		for _, hashDir := range hashDirs {
-			if !timeDir.IsDir() {
-				continue
-			}
-			chunkFiles, err := os.ReadDir(fmt.Sprintf("%s/%s/%s", WriteDir, timeDir.Name(), hashDir.Name()))
-			if err != nil {
-				return nil, err
-			}
-			for _, chunkFile := range chunkFiles {
-				if chunkFile.Name() != chunkFileName {
-					continue
-				}
-				if chunkFile.IsDir() {
-					continue
-				}
-				chunks = append(chunks, fmt.Sprintf("%s/%s/%s/%s", WriteDir, timeDir.Name(), hashDir.Name(), WriteChunkFile))
-			}
-		}
-	}
-	return chunks, nil
+	return paths, nil
 }
 
 func NewReader(chunks []string) storage.Reader {

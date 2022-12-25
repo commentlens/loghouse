@@ -71,7 +71,7 @@ func countChunkLines(chunk string) (uint64, error) {
 	return count, nil
 }
 
-func isChunkReady(chunk string) (bool, error) {
+func chunkCompactible(chunk string) (bool, error) {
 	finfo, err := os.Stat(chunk)
 	if err != nil {
 		return false, err
@@ -98,7 +98,7 @@ func swapChunk() error {
 		return err
 	}
 	for _, chunk := range chunks {
-		ok, err := isChunkReady(chunk)
+		ok, err := chunkCompactible(chunk)
 		if err != nil {
 			return err
 		}
