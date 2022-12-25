@@ -13,7 +13,7 @@ import (
 )
 
 func TestWriter(t *testing.T) {
-	os.RemoveAll(DataDir)
+	os.RemoveAll(WriteDir)
 
 	w := NewWriter()
 
@@ -43,7 +43,7 @@ func TestWriter(t *testing.T) {
 		require.NoError(t, err)
 		require.DirExists(t, dir)
 
-		chunkFile := fmt.Sprintf("%s/%s", dir, ChunkFile)
+		chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 		require.FileExists(t, chunkFile)
 
 		entryJSON, err := json.Marshal(e)

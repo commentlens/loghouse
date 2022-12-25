@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	DataDir   = "data"
-	TimeDir   = "2006-01-02-15"
-	ChunkFile = "chunk.jsonl"
+	WriteDir       = "data/incompact"
+	WriteTimeDir   = "2006-01-02-15"
+	WriteChunkFile = "chunk.jsonl"
 )
 
 func NewWriter() storage.Writer {
@@ -46,12 +46,12 @@ func hashLabels(labels map[string]string) (string, error) {
 }
 
 func logEntryDir(e *storage.LogEntry) (string, error) {
-	timeDir := e.Time.UTC().Format(TimeDir)
+	timeDir := e.Time.UTC().Format(WriteTimeDir)
 	hashDir, err := hashLabels(e.Labels)
 	if err != nil {
 		return "", err
 	}
-	dir := fmt.Sprintf("%s/%s/%s", DataDir, timeDir, hashDir)
+	dir := fmt.Sprintf("%s/%s/%s", WriteDir, timeDir, hashDir)
 	return dir, nil
 }
 
@@ -73,7 +73,7 @@ func (w *writer) write(e *storage.LogEntry) error {
 			return err
 		}
 	}
-	chunkFile := fmt.Sprintf("%s/%s", dir, ChunkFile)
+	chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 
 	f, err := os.OpenFile(chunkFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {

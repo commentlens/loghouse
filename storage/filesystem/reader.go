@@ -9,9 +9,9 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
-func ListChunks() ([]string, error) {
+func ListChunks(chunkFileName string) ([]string, error) {
 	var chunks []string
-	timeDirs, err := os.ReadDir(DataDir)
+	timeDirs, err := os.ReadDir(WriteDir)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +19,7 @@ func ListChunks() ([]string, error) {
 		if !timeDir.IsDir() {
 			continue
 		}
-		hashDirs, err := os.ReadDir(fmt.Sprintf("%s/%s", DataDir, timeDir.Name()))
+		hashDirs, err := os.ReadDir(fmt.Sprintf("%s/%s", WriteDir, timeDir.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -27,18 +27,18 @@ func ListChunks() ([]string, error) {
 			if !timeDir.IsDir() {
 				continue
 			}
-			chunkFiles, err := os.ReadDir(fmt.Sprintf("%s/%s/%s", DataDir, timeDir.Name(), hashDir.Name()))
+			chunkFiles, err := os.ReadDir(fmt.Sprintf("%s/%s/%s", WriteDir, timeDir.Name(), hashDir.Name()))
 			if err != nil {
 				return nil, err
 			}
 			for _, chunkFile := range chunkFiles {
-				if chunkFile.Name() != ChunkFile {
+				if chunkFile.Name() != chunkFileName {
 					continue
 				}
 				if chunkFile.IsDir() {
 					continue
 				}
-				chunks = append(chunks, fmt.Sprintf("%s/%s/%s/%s", DataDir, timeDir.Name(), hashDir.Name(), ChunkFile))
+				chunks = append(chunks, fmt.Sprintf("%s/%s/%s/%s", WriteDir, timeDir.Name(), hashDir.Name(), WriteChunkFile))
 			}
 		}
 	}

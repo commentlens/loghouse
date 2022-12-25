@@ -10,7 +10,7 @@ import (
 )
 
 func TestReader(t *testing.T) {
-	os.RemoveAll(DataDir)
+	os.RemoveAll(WriteDir)
 
 	w := NewWriter()
 
@@ -35,7 +35,7 @@ func TestReader(t *testing.T) {
 	err := w.Write(es)
 	require.NoError(t, err)
 
-	chunks, err := ListChunks()
+	chunks, err := ListChunks(WriteChunkFile)
 	require.NoError(t, err)
 
 	r := NewReader(chunks)
