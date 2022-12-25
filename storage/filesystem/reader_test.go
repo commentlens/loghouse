@@ -35,7 +35,10 @@ func TestReader(t *testing.T) {
 	err := w.Write(es)
 	require.NoError(t, err)
 
-	r := NewReader()
+	chunks, err := ListChunks()
+	require.NoError(t, err)
+
+	r := NewReader(chunks)
 	esRead, err := r.Read(&storage.ReadOptions{
 		Labels: map[string]string{
 			"app":  "test",

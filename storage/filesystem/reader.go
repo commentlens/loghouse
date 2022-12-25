@@ -9,23 +9,12 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
-func NewReader() storage.Reader {
-	return &reader{}
-}
-
-type reader struct {
-}
-
-func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	hash, err := HashLabels(opts.Labels)
-	if err != nil {
-		return nil, err
-	}
+func ListChunks() ([]string, error) {
+	var chunks []string
 	timeDirs, err := os.ReadDir(DataDir)
 	if err != nil {
 		return nil, err
 	}
-	var es []*storage.LogEntry
 	for _, timeDir := range timeDirs {
 		if !timeDir.IsDir() {
 			continue
@@ -38,32 +27,57 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 			if !timeDir.IsDir() {
 				continue
 			}
-			if hashDir.Name() != hash {
-				continue
-			}
-			err := func() error {
-				f, err := os.Open(fmt.Sprintf("%s/%s/%s/%s", DataDir, timeDir.Name(), hashDir.Name(), ChunkFile))
-				if err != nil {
-					return err
-				}
-				defer f.Close()
-				scanner := bufio.NewScanner(f)
-				for scanner.Scan() {
-					var e storage.LogEntry
-					err := json.Unmarshal([]byte(scanner.Text()), &e)
-					if err != nil {
-						return err
-					}
-					es = append(es, &e)
-				}
-				return scanner.Err()
-			}()
+			chunkFiles, err := os.ReadDir(fmt.Sprintf("%s/%s/%s", DataDir, timeDir.Name(), hashDir.Name()))
 			if err != nil {
 				return nil, err
 			}
+			for _, chunkFile := range chunkFiles {
+				if chunkFile.Name() != ChunkFile {
+					continue
+				}
+				if chunkFile.IsDir() {
+					continue
+				}
+				chunks = append(chunks, fmt.Sprintf("%s/%s/%s/%s", DataDir, timeDir.Name(), hashDir.Name(), ChunkFile))
+			}
 		}
 	}
-	return es, nil
+	return chunks, nil
+}
+
+func NewReader(chunks []string) storage.Reader {
+	return &reader{Chunks: chunks}
+}
+
+type reader struct {
+	Chunks []string
+}
+
+func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
+	var es []*storage.LogEntry
+	for _, chunk := range r.Chunks {
+		err := func() error {
+			f, err := os.Open(chunk)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				var e storage.LogEntry
+				err := json.Unmarshal([]byte(scanner.Text()), &e)
+				if err != nil {
+					return err
+				}
+				es = append(es, &e)
+			}
+			return scanner.Err()
+		}()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return storage.Filter(es, opts)
 }
 
 func (r *reader) Count(opts *storage.ReadOptions) (uint64, error) {

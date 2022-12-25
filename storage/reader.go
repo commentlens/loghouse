@@ -13,3 +13,7 @@ type ReadOptions struct {
 	End    time.Time
 	Limit  uint64
 }
+
+func Filter(es []*LogEntry, opts *ReadOptions) ([]*LogEntry, error) {
+	return es, nil
+}
