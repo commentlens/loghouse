@@ -24,7 +24,7 @@ func NewWriter() storage.Writer {
 type writer struct {
 }
 
-func HashLabels(labels map[string]string) (string, error) {
+func hashLabels(labels map[string]string) (string, error) {
 	var keys []string
 	for k := range labels {
 		keys = append(keys, k)
@@ -45,9 +45,9 @@ func HashLabels(labels map[string]string) (string, error) {
 	return digest, nil
 }
 
-func LogEntryDir(e *storage.LogEntry) (string, error) {
+func logEntryDir(e *storage.LogEntry) (string, error) {
 	timeDir := e.Time.UTC().Format(TimeDir)
-	hashDir, err := HashLabels(e.Labels)
+	hashDir, err := hashLabels(e.Labels)
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +62,7 @@ func (w *writer) write(e *storage.LogEntry) error {
 		return err
 	}
 
-	dir, err := LogEntryDir(e)
+	dir, err := logEntryDir(e)
 	if err != nil {
 		return err
 	}

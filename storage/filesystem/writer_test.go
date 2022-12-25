@@ -39,7 +39,7 @@ func TestWriter(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, e := range es {
-		dir, err := LogEntryDir(e)
+		dir, err := logEntryDir(e)
 		require.NoError(t, err)
 		require.DirExists(t, dir)
 
