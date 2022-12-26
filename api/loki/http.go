@@ -4,12 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/commentlens/loghouse/storage/filesystem"
 	"github.com/julienschmidt/httprouter"
 )
+
+const (
+	LogEntryLimit = 1000
+)
+
+type ServerOptions struct {
+	StorageReader storage.Reader
+	StorageWriter storage.Writer
+}
 
 func NewServer(opts *ServerOptions) http.Handler {
 	m := httprouter.New()
@@ -21,19 +33,19 @@ func NewServer(opts *ServerOptions) http.Handler {
 	return m
 }
 
-type ServerOptions struct {
-	StorageReader storage.Reader
-	StorageWriter storage.Writer
-}
-
 type QueryResponse struct {
 	Status string            `json:"status"`
 	Data   QueryResponseData `json:"data"`
 }
 
 type QueryResponseData struct {
-	ResultType string    `json:"resultType"`
-	Result     []*Stream `json:"result"`
+	ResultType string      `json:"resultType"`
+	Result     interface{} `json:"result"`
+}
+
+type Matrix struct {
+	Metric map[string]string `json:"metric"`
+	Values [][]interface{}   `json:"values"`
 }
 
 type Stream struct {
@@ -42,38 +54,60 @@ type Stream struct {
 }
 
 // https://grafana.com/docs/loki/latest/api/#query-loki
-func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	json.NewEncoder(rw).Encode(QueryResponse{
-		Status: "success",
-		Data: QueryResponseData{
-			ResultType: "streams",
-			Result: []*Stream{{
-				Stream: map[string]string{"app": "test"},
-				Values: [][]string{
-					{fmt.Sprint(time.Now().Add(-10 * time.Minute).UnixNano()), "test"},
-					{fmt.Sprint(time.Now().Add(-8 * time.Minute).UnixNano()), "test1"},
-					{fmt.Sprint(time.Now().Add(-6 * time.Minute).UnixNano()), "test2"},
-				},
-			}},
-		},
-	})
+func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	opts.queryRange(rw, r, ps)
 }
 
 // https://grafana.com/docs/loki/latest/api/#query-loki-over-a-range-of-time
 func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	result, _ := func() (interface{}, error) {
+		query := r.URL.Query()
+		input := query.Get("query")
+		ropts := &storage.ReadOptions{}
+		es, err := opts.StorageReader.Read(ropts)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(input, "[") {
+			var values [][]interface{}
+			for _, e := range es {
+				values = append(values, []interface{}{
+					e.Time.Unix(),
+					"1",
+				})
+			}
+			return []*Matrix{{
+				Metric: ropts.Labels,
+				Values: values,
+			}}, nil
+		}
+		var values [][]string
+		for _, e := range es {
+			values = append(values, []string{
+				fmt.Sprint(e.Time.UnixNano()),
+				string(e.Data),
+			})
+		}
+		return []*Stream{{
+			Stream: ropts.Labels,
+			Values: values,
+		}}, nil
+	}()
+	var data QueryResponseData
+	switch result := result.(type) {
+	case []*Stream:
+		data.ResultType = "streams"
+		data.Result = result
+	case []*Matrix:
+		data.ResultType = "matrix"
+		data.Result = result
+	default:
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	json.NewEncoder(rw).Encode(QueryResponse{
 		Status: "success",
-		Data: QueryResponseData{
-			ResultType: "streams",
-			Result: []*Stream{{
-				Stream: map[string]string{"app": "test"},
-				Values: [][]string{
-					{fmt.Sprint(time.Now().Add(-10 * time.Minute).UnixNano()), "test"},
-					{fmt.Sprint(time.Now().Add(-8 * time.Minute).UnixNano()), "test1"},
-					{fmt.Sprint(time.Now().Add(-6 * time.Minute).UnixNano()), "test2"},
-				},
-			}},
-		},
+		Data:   data,
 	})
 }
 
@@ -84,17 +118,60 @@ type LabelResponse struct {
 
 // https://grafana.com/docs/loki/latest/api/#list-labels-within-a-range-of-time
 func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	labels, _ := func() ([]string, error) {
+		es, err := opts.StorageReader.Read(&storage.ReadOptions{
+			Start: time.Now().Add(-filesystem.CompactMaxAge),
+			Limit: LogEntryLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+		m := make(map[string]struct{})
+		for _, e := range es {
+			for k := range e.Labels {
+				m[k] = struct{}{}
+			}
+		}
+		var labels []string
+		for k := range m {
+			labels = append(labels, k)
+		}
+		sort.Strings(labels)
+		return labels, nil
+	}()
 	json.NewEncoder(rw).Encode(LabelResponse{
 		Status: "success",
-		Data:   []string{"app", "app2"},
+		Data:   labels,
 	})
 }
 
 // https://grafana.com/docs/loki/latest/api/#list-label-values-within-a-range-of-time
-func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	labelValues, _ := func() ([]string, error) {
+		label := ps.ByName("name")
+		es, err := opts.StorageReader.Read(&storage.ReadOptions{
+			Start: time.Now().Add(-filesystem.CompactMaxAge),
+			Limit: LogEntryLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+		m := make(map[string]struct{})
+		for _, e := range es {
+			if v, ok := e.Labels[label]; ok {
+				m[v] = struct{}{}
+			}
+		}
+		var labelValues []string
+		for k := range m {
+			labelValues = append(labelValues, k)
+		}
+		sort.Strings(labelValues)
+		return labelValues, nil
+	}()
 	json.NewEncoder(rw).Encode(LabelResponse{
 		Status: "success",
-		Data:   []string{"test", "test1"},
+		Data:   labelValues,
 	})
 }
 
@@ -104,7 +181,38 @@ type PushRequest struct {
 
 // https://grafana.com/docs/loki/latest/api/#push-log-entries-to-loki
 func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var pr PushRequest
-	json.NewDecoder(r.Body).Decode(&pr)
-	spew.Dump(r.Header, pr)
+	err := func() error {
+		var pr PushRequest
+		err := json.NewDecoder(r.Body).Decode(&pr)
+		if err != nil {
+			return err
+		}
+		for _, stream := range pr.Streams {
+			var es []*storage.LogEntry
+			for _, v := range stream.Values {
+				if len(v) != 2 {
+					continue
+				}
+				nsec, err := strconv.ParseUint(v[0], 10, 64)
+				if err != nil {
+					return err
+				}
+				es = append(es, &storage.LogEntry{
+					Labels: stream.Stream,
+					Time:   time.Unix(0, int64(nsec)),
+					Data:   json.RawMessage(v[1]),
+				})
+			}
+			err = opts.StorageWriter.Write(es)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}()
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
 }
