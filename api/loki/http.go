@@ -106,5 +106,5 @@ type PushRequest struct {
 func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var pr PushRequest
 	json.NewDecoder(r.Body).Decode(&pr)
-	spew.Dump(pr)
+	spew.Dump(r.Header, pr)
 }

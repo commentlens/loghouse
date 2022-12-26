@@ -16,6 +16,13 @@ services:
     command: -config.file=/etc/promtail/config.yml
     networks:
       - loki
+  fluentbit:
+    image: fluent/fluent-bit
+    volumes:
+      - /var/log:/var/log
+      - ./fluentbit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    networks:
+      - loki
   grafana:
     image: grafana/grafana:latest
     ports:
