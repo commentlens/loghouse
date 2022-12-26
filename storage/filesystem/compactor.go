@@ -27,10 +27,6 @@ const (
 
 type compactor struct{}
 
-func (*compactor) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	return readBlobs(opts)
-}
-
 func (*compactor) Compact() error {
 	return compact()
 }
@@ -72,13 +68,17 @@ func filterIndex(indexList []*compactIndex, opts *storage.ReadOptions) ([]*compa
 	return out, nil
 }
 
-func readBlobs(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	indexFiles, err := findFiles(CompactDir, CompactIndexFile)
-	if err != nil {
-		return nil, err
-	}
+type blobReader struct {
+	IndexFiles []string
+}
+
+func newBlobReader(indexFiles []string) storage.Reader {
+	return &blobReader{IndexFiles: indexFiles}
+}
+
+func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var out []*storage.LogEntry
-	for _, indexFile := range indexFiles {
+	for _, indexFile := range r.IndexFiles {
 		var indexList []*compactIndex
 		err := func() error {
 			f, err := os.Open(indexFile)
