@@ -11,19 +11,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func dirfiles(dir string) ([]string, error) {
-	var paths []string
+func dirfiles(dir string) ([]string, []string, error) {
+	var dirs, files []string
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		paths = append(paths, path)
+		if d.IsDir() {
+			dirs = append(dirs, path)
+		} else {
+			files = append(files, path)
+		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return paths, nil
+	return dirs, files, nil
 }
 
 func markChunkCompactible() error {
@@ -77,12 +81,14 @@ func TestCompactor(t *testing.T) {
 	err = c.Compact()
 	require.NoError(t, err)
 
-	chunksBeforeCompact, err := dirfiles(WriteDir)
+	dirs, files, err := dirfiles(WriteDir)
 	require.NoError(t, err)
-	require.Len(t, chunksBeforeCompact, 8)
-	dataBeforeCompact, err := dirfiles(CompactDir)
+	require.Len(t, dirs, 5)
+	require.Len(t, files, 3)
+	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
-	require.Len(t, dataBeforeCompact, 0)
+	require.Len(t, dirs, 0)
+	require.Len(t, files, 0)
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
@@ -91,12 +97,14 @@ func TestCompactor(t *testing.T) {
 	err = c.Compact()
 	require.NoError(t, err)
 
-	chunksAfterCompact, err := dirfiles(WriteDir)
+	dirs, files, err = dirfiles(WriteDir)
 	require.NoError(t, err)
-	require.Len(t, chunksAfterCompact, 5)
-	dataAfterCompact, err := dirfiles(CompactDir)
+	require.Len(t, dirs, 5)
+	require.Len(t, files, 0)
+	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
-	require.Len(t, dataAfterCompact, 5)
+	require.Len(t, dirs, 2)
+	require.Len(t, files, 2)
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
@@ -105,11 +113,58 @@ func TestCompactor(t *testing.T) {
 	err = c.Compact()
 	require.NoError(t, err)
 
-	chunksAfterCompactAgain, err := dirfiles(WriteDir)
+	dirs, files, err = dirfiles(WriteDir)
 	require.NoError(t, err)
-	require.Len(t, chunksAfterCompactAgain, 1)
-	require.Equal(t, []string{WriteDir}, chunksAfterCompactAgain)
-	dataAfterCompactAgain, err := dirfiles(CompactDir)
+	require.Len(t, dirs, 1)
+	require.Len(t, files, 0)
+	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
-	require.Len(t, dataAfterCompactAgain, 5)
+	require.Len(t, dirs, 2)
+	require.Len(t, files, 2)
+
+	es2 := []*storage.LogEntry{
+		{
+			Labels: map[string]string{
+				"app":  "test",
+				"role": "test4",
+			},
+			Time: time.Now().UTC(),
+			Data: []byte(`{"test":4}`),
+		},
+		{
+			Labels: map[string]string{
+				"app":  "test",
+				"role": "test5",
+			},
+			Time: time.Now().UTC(),
+			Data: []byte(`{"test":5}`),
+		},
+	}
+	err = w.Write(es2)
+	require.NoError(t, err)
+
+	dirs, files, err = dirfiles(WriteDir)
+	require.NoError(t, err)
+	require.Len(t, dirs, 4)
+	require.Len(t, files, 2)
+	dirs, files, err = dirfiles(CompactDir)
+	require.NoError(t, err)
+	require.Len(t, dirs, 2)
+	require.Len(t, files, 2)
+
+	esRead, err := c.Read(&storage.ReadOptions{
+		Labels: map[string]string{
+			"role": "test5",
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, esRead, 0)
+
+	esRead, err = c.Read(&storage.ReadOptions{
+		Labels: map[string]string{
+			"app": "test",
+		},
+	})
+	require.NoError(t, err)
+	require.ElementsMatch(t, es, esRead)
 }

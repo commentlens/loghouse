@@ -35,7 +35,7 @@ func TestReader(t *testing.T) {
 	err := w.Write(es)
 	require.NoError(t, err)
 
-	chunks, err := ListChunks(WriteChunkFile)
+	chunks, err := findFiles(WriteDir, WriteChunkFile)
 	require.NoError(t, err)
 
 	r := NewReader(chunks)
@@ -47,13 +47,4 @@ func TestReader(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, es, esRead)
-
-	esCount, err := r.Count(&storage.ReadOptions{
-		Labels: map[string]string{
-			"app":  "test",
-			"role": "test2",
-		},
-	})
-	require.NoError(t, err)
-	require.Equal(t, uint64(len(es)), esCount)
 }

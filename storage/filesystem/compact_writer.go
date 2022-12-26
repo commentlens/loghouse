@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	CompactIntv = 10 * time.Second
+	CompactInterval = 10 * time.Second
 )
 
 func NewCompactWriter() storage.Writer {
@@ -24,7 +24,7 @@ type compactWriter struct {
 
 func (w *compactWriter) BackgroundCompact(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(CompactIntv)
+		ticker := time.NewTicker(CompactInterval)
 		defer ticker.Stop()
 
 		w.c.Compact()

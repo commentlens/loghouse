@@ -1,12 +1,14 @@
 package filesystem
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
@@ -16,14 +18,18 @@ import (
 
 const (
 	CompactDir       = "data/compact"
-	CompactIndexDir  = "index"
-	CompactBlobDir   = "blob"
+	CompactChunkFile = "chunk.jsonl.tmp"
+	CompactIndexFile = "index"
+	CompactBlobFile  = "blob"
 	CompactMaxAge    = time.Hour
 	CompactMaxSize   = 1024 * 1024 * 100
-	CompactChunkFile = "chunk.jsonl.tmp"
 )
 
 type compactor struct{}
+
+func (*compactor) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
+	return readBlobs(opts)
+}
 
 func (*compactor) Compact() error {
 	return compact()
@@ -38,10 +44,106 @@ type compactIndex struct {
 	Start        time.Time
 	End          time.Time
 	EntriesTotal uint64
-	BytesTotal   uint64
+	BytesStart   uint64
+	BytesEnd     uint64
 }
 
-func writeChunks(chunks []string) error {
+func filterIndex(indexList []*compactIndex, opts *storage.ReadOptions) ([]*compactIndex, error) {
+	var out []*compactIndex
+	for _, index := range indexList {
+		matchLabels := true
+		for k, v := range opts.Labels {
+			if v2, ok := index.Labels[k]; !ok || v != v2 {
+				matchLabels = false
+				break
+			}
+		}
+		if !matchLabels {
+			continue
+		}
+		if !opts.Start.IsZero() && opts.Start.After(index.End) {
+			continue
+		}
+		if !opts.End.IsZero() && opts.End.Before(index.Start) {
+			continue
+		}
+		out = append(out, index)
+	}
+	return out, nil
+}
+
+func readBlobs(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
+	indexFiles, err := findFiles(CompactDir, CompactIndexFile)
+	if err != nil {
+		return nil, err
+	}
+	var out []*storage.LogEntry
+	for _, indexFile := range indexFiles {
+		var indexList []*compactIndex
+		err := func() error {
+			f, err := os.Open(indexFile)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				var index compactIndex
+				err := json.Unmarshal([]byte(scanner.Text()), &index)
+				if err != nil {
+					return err
+				}
+				indexList = append(indexList, &index)
+			}
+			return scanner.Err()
+		}()
+		if err != nil {
+			return nil, err
+		}
+		indexList, err = filterIndex(indexList, opts)
+		if err != nil {
+			return nil, err
+		}
+		if len(indexList) == 0 {
+			continue
+		}
+		blobFile := fmt.Sprintf("%s%s", strings.TrimSuffix(indexFile, CompactIndexFile), CompactBlobFile)
+		err = func() error {
+			f, err := os.Open(blobFile)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			for _, index := range indexList {
+				b := make([]byte, index.BytesEnd-index.BytesStart)
+				_, err := f.ReadAt(b, int64(index.BytesStart))
+				if err != nil {
+					return err
+				}
+				scanner := bufio.NewScanner(s2.NewReader(bytes.NewReader(b)))
+				for scanner.Scan() {
+					var e storage.LogEntry
+					err := json.Unmarshal([]byte(scanner.Text()), &e)
+					if err != nil {
+						return err
+					}
+					out = append(out, &e)
+				}
+				err = scanner.Err()
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return storage.Filter(out, opts)
+}
+
+func writeBlobs(chunks []string) error {
 	compactID := ulid.Make()
 	var bytesTotal uint64
 	for _, chunk := range chunks {
@@ -57,7 +159,7 @@ func writeChunks(chunks []string) error {
 		enc := s2.NewWriter(buf)
 		w := json.NewEncoder(enc)
 		for _, e := range es {
-			err := w.Encode(e.Data)
+			err := w.Encode(e)
 			if err != nil {
 				return err
 			}
@@ -67,11 +169,11 @@ func writeChunks(chunks []string) error {
 			return err
 		}
 		err = func() error {
-			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, CompactBlobDir), 0777)
+			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, compactID), 0777)
 			if err != nil {
 				return err
 			}
-			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, CompactBlobDir, compactID), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, compactID, CompactBlobFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 			if err != nil {
 				return err
 			}
@@ -87,11 +189,11 @@ func writeChunks(chunks []string) error {
 			return err
 		}
 		err = func() error {
-			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, CompactIndexDir), 0777)
+			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, compactID), 0777)
 			if err != nil {
 				return err
 			}
-			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, CompactIndexDir, compactID), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, compactID, CompactIndexFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 			if err != nil {
 				return err
 			}
@@ -102,7 +204,8 @@ func writeChunks(chunks []string) error {
 				Start:        es[0].Time,
 				End:          es[len(es)-1].Time,
 				EntriesTotal: uint64(len(es)),
-				BytesTotal:   uint64(buf.Len()),
+				BytesStart:   bytesTotal,
+				BytesEnd:     bytesTotal + uint64(buf.Len()),
 			})
 		}()
 		if err != nil {
@@ -119,11 +222,11 @@ func writeChunks(chunks []string) error {
 }
 
 func compact() error {
-	chunks, err := ListChunks(CompactChunkFile)
+	chunks, err := findFiles(WriteDir, CompactChunkFile)
 	if err != nil {
 		return err
 	}
-	err = writeChunks(chunks)
+	err = writeBlobs(chunks)
 	if err != nil {
 		return err
 	}
@@ -155,7 +258,7 @@ func chunkCompactible(chunk string) (bool, error) {
 }
 
 func swapChunk() error {
-	chunks, err := ListChunks(WriteChunkFile)
+	chunks, err := findFiles(WriteDir, WriteChunkFile)
 	if err != nil {
 		return err
 	}
@@ -167,7 +270,7 @@ func swapChunk() error {
 		if !ok {
 			continue
 		}
-		err = os.Rename(chunk, fmt.Sprintf("%s.tmp", chunk))
+		err = os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactChunkFile))
 		if err != nil {
 			return err
 		}

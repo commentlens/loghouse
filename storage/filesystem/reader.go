@@ -10,16 +10,16 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
-func ListChunks(chunkFileName string) ([]string, error) {
+func findFiles(dir, name string) ([]string, error) {
 	var paths []string
-	err := filepath.WalkDir(WriteDir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
 		if d.IsDir() {
 			return nil
 		}
-		if d.Name() != chunkFileName {
+		if d.Name() != name {
 			return nil
 		}
 		paths = append(paths, path)
@@ -64,12 +64,4 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 		}
 	}
 	return storage.Filter(es, opts)
-}
-
-func (r *reader) Count(opts *storage.ReadOptions) (uint64, error) {
-	es, err := r.Read(opts)
-	if err != nil {
-		return 0, err
-	}
-	return uint64(len(es)), nil
 }

@@ -7,7 +7,6 @@ import (
 
 type Reader interface {
 	Read(*ReadOptions) ([]*LogEntry, error)
-	Count(*ReadOptions) (uint64, error)
 }
 
 type ReadOptions struct {
