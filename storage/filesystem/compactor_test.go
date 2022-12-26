@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -161,6 +162,64 @@ func TestCompactor(t *testing.T) {
 	require.Len(t, esRead, 0)
 
 	esRead, err = c.Read(&storage.ReadOptions{
+		Labels: map[string]string{
+			"app": "test",
+		},
+	})
+	require.NoError(t, err)
+	require.ElementsMatch(t, es, esRead)
+}
+
+func TestCompactReadWriter(t *testing.T) {
+	os.RemoveAll(WriteDir)
+	os.RemoveAll(CompactDir)
+
+	w := NewCompactWriter()
+	es := []*storage.LogEntry{
+		{
+			Labels: map[string]string{
+				"app":  "test",
+				"role": "test",
+			},
+			Time: time.Now().UTC(),
+			Data: []byte(`{"test":1}`),
+		},
+		{
+			Labels: map[string]string{
+				"app":  "test",
+				"role": "test2",
+			},
+			Time: time.Now().UTC(),
+			Data: []byte(`{"test":2}`),
+		},
+		{
+			Labels: map[string]string{
+				"app":  "test",
+				"role": "test3",
+			},
+			Time: time.Now().UTC(),
+			Data: []byte(`{"test":3}`),
+		},
+	}
+	err := w.Write(es)
+	require.NoError(t, err)
+
+	r := NewCompactReader()
+	esRead, err := r.Read(&storage.ReadOptions{
+		Labels: map[string]string{
+			"app": "test",
+		},
+	})
+	require.NoError(t, err)
+	require.ElementsMatch(t, es, esRead)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*CompactInterval)
+	defer cancel()
+
+	err = w.BackgroundCompact(ctx)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	esRead, err = r.Read(&storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},

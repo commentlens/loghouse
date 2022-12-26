@@ -16,6 +16,12 @@ type compactReader struct {
 }
 
 func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
+	chunks, err := findFiles(WriteDir, WriteChunkFile)
+	if err != nil {
+		return nil, err
+	}
+	r.r.Chunks = chunks
+
 	es1, err := r.r.Read(opts)
 	if err != nil {
 		return nil, err

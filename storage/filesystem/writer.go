@@ -20,8 +20,7 @@ func NewWriter() storage.Writer {
 	return &writer{}
 }
 
-type writer struct {
-}
+type writer struct{}
 
 func hashLabels(labels map[string]string) (string, error) {
 	var keys []string

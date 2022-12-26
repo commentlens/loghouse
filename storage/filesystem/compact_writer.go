@@ -12,7 +12,10 @@ const (
 	CompactInterval = 10 * time.Second
 )
 
-func NewCompactWriter() storage.Writer {
+func NewCompactWriter() interface {
+	storage.Writer
+	BackgroundCompact(context.Context) error
+} {
 	return &compactWriter{}
 }
 
@@ -22,29 +25,34 @@ type compactWriter struct {
 	mu sync.Mutex
 }
 
-func (w *compactWriter) BackgroundCompact(ctx context.Context) {
-	go func() {
-		ticker := time.NewTicker(CompactInterval)
-		defer ticker.Stop()
+func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
+	ticker := time.NewTicker(CompactInterval)
+	defer ticker.Stop()
 
-		w.c.Compact()
+	err := w.c.Compact()
+	if err != nil {
+		return err
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			err := func() error {
+				w.mu.Lock()
+				defer w.mu.Unlock()
 
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				func() {
-					w.mu.Lock()
-					defer w.mu.Unlock()
-
-					w.c.SwapChunk()
-				}()
-
-				w.c.Compact()
+				return w.c.SwapChunk()
+			}()
+			if err != nil {
+				return err
+			}
+			err = w.c.Compact()
+			if err != nil {
+				return err
 			}
 		}
-	}()
+	}
 }
 
 func (w *compactWriter) Write(es []*storage.LogEntry) error {
