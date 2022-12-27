@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	LogEntryLimit = 1000
+	ReadLimit = 1000
 )
 
 type ServerOptions struct {
@@ -62,13 +62,38 @@ func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps htt
 func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	result, _ := func() (interface{}, error) {
 		query := r.URL.Query()
-		input := query.Get("query")
-		ropts := &storage.ReadOptions{}
+		expr := query.Get("query")
+		end := time.Now()
+		start := end.Add(-time.Hour)
+		if startNsec := query.Get("start"); startNsec != "" {
+			nsec, err := strconv.ParseUint(startNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			start = time.Unix(0, int64(nsec))
+		}
+		if endNsec := query.Get("end"); endNsec != "" {
+			nsec, err := strconv.ParseUint(endNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			end = time.Unix(0, int64(nsec))
+		}
+		ropts := &storage.ReadOptions{
+			Start: start,
+			End:   end,
+			Limit: ReadLimit,
+		}
 		es, err := opts.StorageReader.Read(ropts)
 		if err != nil {
 			return nil, err
 		}
-		if strings.Contains(input, "[") {
+		if query.Get("direction") == "backward" {
+			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.After(es[j].Time) })
+		} else {
+			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+		}
+		if strings.Contains(expr, "[") {
 			var values [][]interface{}
 			for _, e := range es {
 				values = append(values, []interface{}{
@@ -121,7 +146,7 @@ func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ htt
 	labels, _ := func() ([]string, error) {
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
 			Start: time.Now().Add(-filesystem.CompactMaxAge),
-			Limit: LogEntryLimit,
+			Limit: ReadLimit,
 		})
 		if err != nil {
 			return nil, err
@@ -151,7 +176,7 @@ func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, 
 		label := ps.ByName("name")
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
 			Start: time.Now().Add(-filesystem.CompactMaxAge),
-			Limit: LogEntryLimit,
+			Limit: ReadLimit,
 		})
 		if err != nil {
 			return nil, err
