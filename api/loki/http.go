@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
-	"github.com/commentlens/loghouse/storage/filesystem"
 	"github.com/julienschmidt/httprouter"
 )
 
 const (
 	ReadLimit = 1000
+	ReadRange = time.Hour
 )
 
 type ServerOptions struct {
@@ -29,6 +29,7 @@ func NewServer(opts *ServerOptions) http.Handler {
 	m.GET("/loki/api/v1/query_range", opts.queryRange)
 	m.GET("/loki/api/v1/labels", opts.labels)
 	m.GET("/loki/api/v1/label/:name/values", opts.labelValues)
+	m.GET("/loki/api/v1/series", opts.series)
 	m.POST("/loki/api/v1/push", opts.push)
 	return m
 }
@@ -62,9 +63,8 @@ func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps htt
 func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	result, _ := func() (interface{}, error) {
 		query := r.URL.Query()
-		expr := query.Get("query")
 		end := time.Now()
-		start := end.Add(-time.Hour)
+		start := end.Add(-ReadRange)
 		if startNsec := query.Get("start"); startNsec != "" {
 			nsec, err := strconv.ParseUint(startNsec, 10, 64)
 			if err != nil {
@@ -79,6 +79,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			end = time.Unix(0, int64(nsec))
 		}
+		expr := query.Get("query")
 		ropts := &storage.ReadOptions{
 			Start: start,
 			End:   end,
@@ -144,8 +145,26 @@ type LabelResponse struct {
 // https://grafana.com/docs/loki/latest/api/#list-labels-within-a-range-of-time
 func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	labels, _ := func() ([]string, error) {
+		query := r.URL.Query()
+		end := time.Now()
+		start := end.Add(-ReadRange)
+		if startNsec := query.Get("start"); startNsec != "" {
+			nsec, err := strconv.ParseUint(startNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			start = time.Unix(0, int64(nsec))
+		}
+		if endNsec := query.Get("end"); endNsec != "" {
+			nsec, err := strconv.ParseUint(endNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			end = time.Unix(0, int64(nsec))
+		}
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
-			Start: time.Now().Add(-filesystem.CompactMaxAge),
+			Start: start,
+			End:   end,
 			Limit: ReadLimit,
 		})
 		if err != nil {
@@ -174,8 +193,26 @@ func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ htt
 func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	labelValues, _ := func() ([]string, error) {
 		label := ps.ByName("name")
+		query := r.URL.Query()
+		end := time.Now()
+		start := end.Add(-ReadRange)
+		if startNsec := query.Get("start"); startNsec != "" {
+			nsec, err := strconv.ParseUint(startNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			start = time.Unix(0, int64(nsec))
+		}
+		if endNsec := query.Get("end"); endNsec != "" {
+			nsec, err := strconv.ParseUint(endNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			end = time.Unix(0, int64(nsec))
+		}
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
-			Start: time.Now().Add(-filesystem.CompactMaxAge),
+			Start: start,
+			End:   end,
 			Limit: ReadLimit,
 		})
 		if err != nil {
@@ -197,6 +234,62 @@ func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, 
 	json.NewEncoder(rw).Encode(LabelResponse{
 		Status: "success",
 		Data:   labelValues,
+	})
+}
+
+type SeriesResponse struct {
+	Status string              `json:"status"`
+	Data   []map[string]string `json:"data"`
+}
+
+// https://grafana.com/docs/loki/latest/api/#list-series
+func (opts *ServerOptions) series(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	kvs, _ := func() ([]map[string]string, error) {
+		query := r.URL.Query()
+		end := time.Now()
+		start := end.Add(-ReadRange)
+		if startNsec := query.Get("start"); startNsec != "" {
+			nsec, err := strconv.ParseUint(startNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			start = time.Unix(0, int64(nsec))
+		}
+		if endNsec := query.Get("end"); endNsec != "" {
+			nsec, err := strconv.ParseUint(endNsec, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			end = time.Unix(0, int64(nsec))
+		}
+		es, err := opts.StorageReader.Read(&storage.ReadOptions{
+			Start: start,
+			End:   end,
+			Limit: ReadLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+		m := make(map[string]map[string]struct{})
+		for _, e := range es {
+			for k, v := range e.Labels {
+				if _, ok := m[k]; !ok {
+					m[k] = make(map[string]struct{})
+				}
+				m[k][v] = struct{}{}
+			}
+		}
+		var kvs []map[string]string
+		for k, kv := range m {
+			for v := range kv {
+				kvs = append(kvs, map[string]string{k: v})
+			}
+		}
+		return kvs, nil
+	}()
+	json.NewEncoder(rw).Encode(SeriesResponse{
+		Status: "success",
+		Data:   kvs,
 	})
 }
 
