@@ -20,11 +20,11 @@ services:
     command: -config.file=/etc/promtail/config.yml
     networks:
       - loki
-  fluentbit:
+  fluent-bit:
     image: fluent/fluent-bit
     volumes:
       - /var/log:/var/log
-      - ./fluentbit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
     networks:
       - loki
   grafana:
