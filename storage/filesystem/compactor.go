@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -17,12 +18,13 @@ import (
 )
 
 const (
-	CompactDir       = "data/compact"
-	CompactChunkFile = "chunk.jsonl.tmp"
-	CompactIndexFile = "index"
-	CompactBlobFile  = "blob"
-	CompactMaxAge    = time.Hour
-	CompactMaxSize   = 1024 * 1024 * 100
+	CompactDir         = "data/compact"
+	CompactChunkFile   = "chunk.jsonl.tmp"
+	CompactIndexFile   = "index"
+	CompactBlobFile    = "blob"
+	CompactMaxAge      = time.Hour
+	CompactMaxSize     = 1024 * 1024 * 100
+	CompactCompression = "s2"
 )
 
 type compactor struct{}
@@ -36,12 +38,14 @@ func (*compactor) SwapChunk() error {
 }
 
 type compactIndex struct {
-	Labels       map[string]string
-	Start        time.Time
-	End          time.Time
-	EntriesTotal uint64
-	BytesStart   uint64
-	BytesEnd     uint64
+	Labels map[string]string
+	Start  time.Time
+	End    time.Time
+
+	BlobID      string
+	BytesStart  uint64
+	BytesEnd    uint64
+	Compression string
 }
 
 func filterIndex(indexList []*compactIndex, opts *storage.ReadOptions) ([]*compactIndex, error) {
@@ -120,7 +124,12 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 				if err != nil {
 					return err
 				}
-				scanner := bufio.NewScanner(s2.NewReader(bytes.NewReader(b)))
+				var r io.Reader = bytes.NewReader(b)
+				switch index.Compression {
+				case "s2":
+					r = s2.NewReader(r)
+				}
+				scanner := bufio.NewScanner(r)
 				for scanner.Scan() {
 					var e storage.LogEntry
 					err := json.Unmarshal([]byte(scanner.Text()), &e)
@@ -144,7 +153,7 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 }
 
 func writeBlobs(chunks []string) error {
-	compactID := ulid.Make()
+	blobID := ulid.Make().String()
 	var bytesTotal uint64
 	for _, chunk := range chunks {
 		r := NewReader([]string{chunk})
@@ -156,24 +165,34 @@ func writeBlobs(chunks []string) error {
 			continue
 		}
 		buf := new(bytes.Buffer)
-		enc := s2.NewWriter(buf)
-		w := json.NewEncoder(enc)
-		for _, e := range es {
-			err := w.Encode(e)
-			if err != nil {
-				return err
-			}
+		compression := CompactCompression
+		var w io.Writer = buf
+		switch compression {
+		case "s2":
+			w = s2.NewWriter(w)
 		}
-		err = enc.Close()
+		err = func(w io.Writer) error {
+			enc := json.NewEncoder(w)
+			for _, e := range es {
+				err := enc.Encode(e)
+				if err != nil {
+					return err
+				}
+			}
+			if wc, ok := w.(io.WriteCloser); ok {
+				return wc.Close()
+			}
+			return nil
+		}(w)
 		if err != nil {
 			return err
 		}
 		err = func() error {
-			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, compactID), 0777)
+			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, blobID), 0777)
 			if err != nil {
 				return err
 			}
-			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, compactID, CompactBlobFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, blobID, CompactBlobFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 			if err != nil {
 				return err
 			}
@@ -189,23 +208,24 @@ func writeBlobs(chunks []string) error {
 			return err
 		}
 		err = func() error {
-			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, compactID), 0777)
+			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, blobID), 0777)
 			if err != nil {
 				return err
 			}
-			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, compactID, CompactIndexFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, blobID, CompactIndexFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 			if err != nil {
 				return err
 			}
 			defer f.Close()
 
 			return json.NewEncoder(f).Encode(&compactIndex{
-				Labels:       es[0].Labels,
-				Start:        es[0].Time,
-				End:          es[len(es)-1].Time,
-				EntriesTotal: uint64(len(es)),
-				BytesStart:   bytesTotal,
-				BytesEnd:     bytesTotal + uint64(buf.Len()),
+				Labels:      es[0].Labels,
+				Start:       es[0].Time,
+				End:         es[len(es)-1].Time,
+				BlobID:      blobID,
+				BytesStart:  bytesTotal,
+				BytesEnd:    bytesTotal + uint64(buf.Len()),
+				Compression: compression,
 			})
 		}()
 		if err != nil {
@@ -215,7 +235,7 @@ func writeBlobs(chunks []string) error {
 		if bytesTotal < CompactMaxSize {
 			continue
 		}
-		compactID = ulid.Make()
+		blobID = ulid.Make().String()
 		bytesTotal = 0
 	}
 	return nil
