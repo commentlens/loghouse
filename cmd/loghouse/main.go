@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/commentlens/loghouse/api/loki"
@@ -8,9 +9,13 @@ import (
 )
 
 func main() {
+	r := filesystem.NewCompactReader()
+	w := filesystem.NewCompactWriter()
+	go w.BackgroundCompact(context.Background())
+
 	srv := loki.NewServer(&loki.ServerOptions{
-		StorageReader: filesystem.NewCompactReader(),
-		StorageWriter: filesystem.NewCompactWriter(),
+		StorageReader: r,
+		StorageWriter: w,
 	})
 	http.ListenAndServe(":3100", srv)
 }

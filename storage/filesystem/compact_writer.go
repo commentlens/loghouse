@@ -29,16 +29,16 @@ func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
 	ticker := time.NewTicker(CompactInterval)
 	defer ticker.Stop()
 
-	err := w.c.Compact()
-	if err != nil {
-		return err
-	}
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			err := func() error {
+			err := w.c.Compact()
+			if err != nil {
+				return err
+			}
+			err = func() error {
 				w.mu.Lock()
 				defer w.mu.Unlock()
 
@@ -58,8 +58,5 @@ func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
 func (w *compactWriter) Write(es []*storage.LogEntry) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
-	defer w.c.SwapChunk()
-
 	return w.w.Write(es)
 }
