@@ -1,12 +1,16 @@
 version: "3"
 networks:
   loki:
+volumes:
+  loghouse-data:
 services:
   loki:
     image: loghouse
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loghouse-data:/data
     networks:
       - loki
   promtail:
