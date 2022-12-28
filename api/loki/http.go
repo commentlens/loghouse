@@ -79,7 +79,6 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			end = time.Unix(0, int64(nsec))
 		}
-		expr := query.Get("query")
 		ropts := &storage.ReadOptions{
 			Start: start,
 			End:   end,
@@ -89,23 +88,39 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil {
 			return nil, err
 		}
-		if query.Get("direction") == "backward" {
-			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.After(es[j].Time) })
-		} else {
-			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
-		}
-		if strings.Contains(expr, "[") {
+		if stepRaw, expr := query.Get("step"), query.Get("query"); stepRaw != "" && strings.Contains(expr, "[") {
+			step, err := time.ParseDuration(stepRaw)
+			if err != nil {
+				return nil, err
+			}
 			var values [][]interface{}
-			for _, e := range es {
+			i := 0
+			for t := start; t.Before(end); t = t.Add(step) {
+				var count uint64
+				for ; i < len(es); i++ {
+					if es[i].Time.Before(t) {
+						continue
+					}
+					if es[i].Time.Before(t.Add(step)) {
+						count++
+						continue
+					}
+					break
+				}
 				values = append(values, []interface{}{
-					e.Time.Unix(),
-					"1",
+					t.Unix(),
+					fmt.Sprint(count),
 				})
 			}
 			return []*Matrix{{
 				Metric: ropts.Labels,
 				Values: values,
 			}}, nil
+		}
+		if query.Get("direction") == "backward" {
+			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.After(es[j].Time) })
+		} else {
+			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 		}
 		var values [][]string
 		for _, e := range es {
