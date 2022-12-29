@@ -119,12 +119,7 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 			}
 			defer f.Close()
 			for _, index := range indexList {
-				b := make([]byte, index.BytesEnd-index.BytesStart)
-				_, err := f.ReadAt(b, int64(index.BytesStart))
-				if err != nil {
-					return err
-				}
-				var r io.Reader = bytes.NewReader(b)
+				var r io.Reader = io.NewSectionReader(f, int64(index.BytesStart), int64(index.BytesEnd-index.BytesStart))
 				switch index.Compression {
 				case "s2":
 					r = s2.NewReader(r)
