@@ -7,11 +7,10 @@ volumes:
 services:
   loki:
     image: loghouse
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loghouse-data:/data
+    ports:
+      - "3100:3100"
     networks:
       - loki
   fluent-bit:
