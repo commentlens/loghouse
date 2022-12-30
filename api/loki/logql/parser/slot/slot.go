@@ -12,7 +12,12 @@ import(
 type Label int
 
 const(
-	LabelKey0R0 Label = iota
+	LabelFilter0R0 Label = iota
+	LabelFilter0R1
+	LabelFilter0R2
+	LabelFilter0R3
+	LabelFilter0R4
+	LabelKey0R0
 	LabelKey0R1
 	LabelOp0R0
 	LabelOp0R1
@@ -24,8 +29,20 @@ const(
 	LabelOp3R1
 	LabelValue0R0
 	LabelValue0R1
+	LineFilter0R0
+	LineFilter0R1
+	LineFilter0R2
+	LineFilterOp0R0
+	LineFilterOp0R1
+	LineFilterOp1R0
+	LineFilterOp1R1
+	LineFilterOp2R0
+	LineFilterOp2R1
+	LineFilterOp3R0
+	LineFilterOp3R1
 	LogQuery0R0
 	LogQuery0R1
+	LogQuery0R2
 	LogSelector0R0
 	LogSelector0R1
 	LogSelector0R2
@@ -40,6 +57,9 @@ const(
 	LogSelectorMembers1R1
 	LogSelectorMembers1R2
 	LogSelectorMembers1R3
+	LogSelectorMembersMaybe0R0
+	LogSelectorMembersMaybe1R0
+	LogSelectorMembersMaybe1R1
 	MetricQuery0R0
 	MetricQuery0R1
 	MetricQuery0R2
@@ -55,6 +75,24 @@ const(
 	MetricQuery0R12
 	MetricQuery0R13
 	MetricQuery0R14
+	NestedLabelKey0R0
+	NestedLabelKey0R1
+	NestedLabelKey1R0
+	NestedLabelKey1R1
+	NestedLabelKey1R2
+	NestedLabelKey1R3
+	Pipeline0R0
+	Pipeline0R1
+	Pipeline1R0
+	Pipeline1R1
+	Pipelines0R0
+	Pipelines0R1
+	Pipelines1R0
+	Pipelines1R1
+	Pipelines1R2
+	PipelinesMaybe0R0
+	PipelinesMaybe1R0
+	PipelinesMaybe1R1
 	Query0R0
 	Query0R1
 	Query1R0
@@ -148,31 +186,81 @@ func (s *Slot) String() string {
 }
 
 var slots = map[Label]*Slot{ 
+	LabelFilter0R0: {
+		symbols.NT_LabelFilter, 0, 0, 
+		symbols.Symbols{  
+			symbols.T_18, 
+			symbols.NT_NestedLabelKey, 
+			symbols.NT_LabelOp, 
+			symbols.NT_LabelValue,
+		}, 
+		LabelFilter0R0, 
+	},
+	LabelFilter0R1: {
+		symbols.NT_LabelFilter, 0, 1, 
+		symbols.Symbols{  
+			symbols.T_18, 
+			symbols.NT_NestedLabelKey, 
+			symbols.NT_LabelOp, 
+			symbols.NT_LabelValue,
+		}, 
+		LabelFilter0R1, 
+	},
+	LabelFilter0R2: {
+		symbols.NT_LabelFilter, 0, 2, 
+		symbols.Symbols{  
+			symbols.T_18, 
+			symbols.NT_NestedLabelKey, 
+			symbols.NT_LabelOp, 
+			symbols.NT_LabelValue,
+		}, 
+		LabelFilter0R2, 
+	},
+	LabelFilter0R3: {
+		symbols.NT_LabelFilter, 0, 3, 
+		symbols.Symbols{  
+			symbols.T_18, 
+			symbols.NT_NestedLabelKey, 
+			symbols.NT_LabelOp, 
+			symbols.NT_LabelValue,
+		}, 
+		LabelFilter0R3, 
+	},
+	LabelFilter0R4: {
+		symbols.NT_LabelFilter, 0, 4, 
+		symbols.Symbols{  
+			symbols.T_18, 
+			symbols.NT_NestedLabelKey, 
+			symbols.NT_LabelOp, 
+			symbols.NT_LabelValue,
+		}, 
+		LabelFilter0R4, 
+	},
 	LabelKey0R0: {
 		symbols.NT_LabelKey, 0, 0, 
 		symbols.Symbols{  
-			symbols.T_15,
+			symbols.T_16,
 		}, 
 		LabelKey0R0, 
 	},
 	LabelKey0R1: {
 		symbols.NT_LabelKey, 0, 1, 
 		symbols.Symbols{  
-			symbols.T_15,
+			symbols.T_16,
 		}, 
 		LabelKey0R1, 
 	},
 	LabelOp0R0: {
 		symbols.NT_LabelOp, 0, 0, 
 		symbols.Symbols{  
-			symbols.T_5,
+			symbols.T_6,
 		}, 
 		LabelOp0R0, 
 	},
 	LabelOp0R1: {
 		symbols.NT_LabelOp, 0, 1, 
 		symbols.Symbols{  
-			symbols.T_5,
+			symbols.T_6,
 		}, 
 		LabelOp0R1, 
 	},
@@ -193,14 +281,14 @@ var slots = map[Label]*Slot{
 	LabelOp2R0: {
 		symbols.NT_LabelOp, 2, 0, 
 		symbols.Symbols{  
-			symbols.T_6,
+			symbols.T_7,
 		}, 
 		LabelOp2R0, 
 	},
 	LabelOp2R1: {
 		symbols.NT_LabelOp, 2, 1, 
 		symbols.Symbols{  
-			symbols.T_6,
+			symbols.T_7,
 		}, 
 		LabelOp2R1, 
 	},
@@ -221,64 +309,154 @@ var slots = map[Label]*Slot{
 	LabelValue0R0: {
 		symbols.NT_LabelValue, 0, 0, 
 		symbols.Symbols{  
-			symbols.T_13,
+			symbols.T_14,
 		}, 
 		LabelValue0R0, 
 	},
 	LabelValue0R1: {
 		symbols.NT_LabelValue, 0, 1, 
 		symbols.Symbols{  
-			symbols.T_13,
+			symbols.T_14,
 		}, 
 		LabelValue0R1, 
+	},
+	LineFilter0R0: {
+		symbols.NT_LineFilter, 0, 0, 
+		symbols.Symbols{  
+			symbols.NT_LineFilterOp, 
+			symbols.T_14,
+		}, 
+		LineFilter0R0, 
+	},
+	LineFilter0R1: {
+		symbols.NT_LineFilter, 0, 1, 
+		symbols.Symbols{  
+			symbols.NT_LineFilterOp, 
+			symbols.T_14,
+		}, 
+		LineFilter0R1, 
+	},
+	LineFilter0R2: {
+		symbols.NT_LineFilter, 0, 2, 
+		symbols.Symbols{  
+			symbols.NT_LineFilterOp, 
+			symbols.T_14,
+		}, 
+		LineFilter0R2, 
+	},
+	LineFilterOp0R0: {
+		symbols.NT_LineFilterOp, 0, 0, 
+		symbols.Symbols{  
+			symbols.T_19,
+		}, 
+		LineFilterOp0R0, 
+	},
+	LineFilterOp0R1: {
+		symbols.NT_LineFilterOp, 0, 1, 
+		symbols.Symbols{  
+			symbols.T_19,
+		}, 
+		LineFilterOp0R1, 
+	},
+	LineFilterOp1R0: {
+		symbols.NT_LineFilterOp, 1, 0, 
+		symbols.Symbols{  
+			symbols.T_0,
+		}, 
+		LineFilterOp1R0, 
+	},
+	LineFilterOp1R1: {
+		symbols.NT_LineFilterOp, 1, 1, 
+		symbols.Symbols{  
+			symbols.T_0,
+		}, 
+		LineFilterOp1R1, 
+	},
+	LineFilterOp2R0: {
+		symbols.NT_LineFilterOp, 2, 0, 
+		symbols.Symbols{  
+			symbols.T_20,
+		}, 
+		LineFilterOp2R0, 
+	},
+	LineFilterOp2R1: {
+		symbols.NT_LineFilterOp, 2, 1, 
+		symbols.Symbols{  
+			symbols.T_20,
+		}, 
+		LineFilterOp2R1, 
+	},
+	LineFilterOp3R0: {
+		symbols.NT_LineFilterOp, 3, 0, 
+		symbols.Symbols{  
+			symbols.T_1,
+		}, 
+		LineFilterOp3R0, 
+	},
+	LineFilterOp3R1: {
+		symbols.NT_LineFilterOp, 3, 1, 
+		symbols.Symbols{  
+			symbols.T_1,
+		}, 
+		LineFilterOp3R1, 
 	},
 	LogQuery0R0: {
 		symbols.NT_LogQuery, 0, 0, 
 		symbols.Symbols{  
-			symbols.NT_LogSelector,
+			symbols.NT_LogSelector, 
+			symbols.NT_PipelinesMaybe,
 		}, 
 		LogQuery0R0, 
 	},
 	LogQuery0R1: {
 		symbols.NT_LogQuery, 0, 1, 
 		symbols.Symbols{  
-			symbols.NT_LogSelector,
+			symbols.NT_LogSelector, 
+			symbols.NT_PipelinesMaybe,
 		}, 
 		LogQuery0R1, 
+	},
+	LogQuery0R2: {
+		symbols.NT_LogQuery, 0, 2, 
+		symbols.Symbols{  
+			symbols.NT_LogSelector, 
+			symbols.NT_PipelinesMaybe,
+		}, 
+		LogQuery0R2, 
 	},
 	LogSelector0R0: {
 		symbols.NT_LogSelector, 0, 0, 
 		symbols.Symbols{  
-			symbols.T_16, 
-			symbols.NT_LogSelectorMembers, 
-			symbols.T_17,
+			symbols.T_17, 
+			symbols.NT_LogSelectorMembersMaybe, 
+			symbols.T_21,
 		}, 
 		LogSelector0R0, 
 	},
 	LogSelector0R1: {
 		symbols.NT_LogSelector, 0, 1, 
 		symbols.Symbols{  
-			symbols.T_16, 
-			symbols.NT_LogSelectorMembers, 
-			symbols.T_17,
+			symbols.T_17, 
+			symbols.NT_LogSelectorMembersMaybe, 
+			symbols.T_21,
 		}, 
 		LogSelector0R1, 
 	},
 	LogSelector0R2: {
 		symbols.NT_LogSelector, 0, 2, 
 		symbols.Symbols{  
-			symbols.T_16, 
-			symbols.NT_LogSelectorMembers, 
-			symbols.T_17,
+			symbols.T_17, 
+			symbols.NT_LogSelectorMembersMaybe, 
+			symbols.T_21,
 		}, 
 		LogSelector0R2, 
 	},
 	LogSelector0R3: {
 		symbols.NT_LogSelector, 0, 3, 
 		symbols.Symbols{  
-			symbols.T_16, 
-			symbols.NT_LogSelectorMembers, 
-			symbols.T_17,
+			symbols.T_17, 
+			symbols.NT_LogSelectorMembersMaybe, 
+			symbols.T_21,
 		}, 
 		LogSelector0R3, 
 	},
@@ -368,21 +546,41 @@ var slots = map[Label]*Slot{
 		}, 
 		LogSelectorMembers1R3, 
 	},
+	LogSelectorMembersMaybe0R0: {
+		symbols.NT_LogSelectorMembersMaybe, 0, 0, 
+		symbols.Symbols{ 
+		}, 
+		LogSelectorMembersMaybe0R0, 
+	},
+	LogSelectorMembersMaybe1R0: {
+		symbols.NT_LogSelectorMembersMaybe, 1, 0, 
+		symbols.Symbols{  
+			symbols.NT_LogSelectorMembers,
+		}, 
+		LogSelectorMembersMaybe1R0, 
+	},
+	LogSelectorMembersMaybe1R1: {
+		symbols.NT_LogSelectorMembersMaybe, 1, 1, 
+		symbols.Symbols{  
+			symbols.NT_LogSelectorMembers,
+		}, 
+		LogSelectorMembersMaybe1R1, 
+	},
 	MetricQuery0R0: {
 		symbols.NT_MetricQuery, 0, 0, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -391,18 +589,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R1: {
 		symbols.NT_MetricQuery, 0, 1, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -411,18 +609,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R2: {
 		symbols.NT_MetricQuery, 0, 2, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -431,18 +629,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R3: {
 		symbols.NT_MetricQuery, 0, 3, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -451,18 +649,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R4: {
 		symbols.NT_MetricQuery, 0, 4, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -471,18 +669,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R5: {
 		symbols.NT_MetricQuery, 0, 5, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -491,18 +689,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R6: {
 		symbols.NT_MetricQuery, 0, 6, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -511,18 +709,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R7: {
 		symbols.NT_MetricQuery, 0, 7, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -531,18 +729,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R8: {
 		symbols.NT_MetricQuery, 0, 8, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -551,18 +749,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R9: {
 		symbols.NT_MetricQuery, 0, 9, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -571,18 +769,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R10: {
 		symbols.NT_MetricQuery, 0, 10, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -591,18 +789,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R11: {
 		symbols.NT_MetricQuery, 0, 11, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -611,18 +809,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R12: {
 		symbols.NT_MetricQuery, 0, 12, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -631,18 +829,18 @@ var slots = map[Label]*Slot{
 	MetricQuery0R13: {
 		symbols.NT_MetricQuery, 0, 13, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
@@ -651,22 +849,158 @@ var slots = map[Label]*Slot{
 	MetricQuery0R14: {
 		symbols.NT_MetricQuery, 0, 14, 
 		symbols.Symbols{  
-			symbols.T_14, 
-			symbols.T_9, 
-			symbols.T_2, 
-			symbols.T_12, 
-			symbols.T_3, 
-			symbols.T_2, 
+			symbols.T_15, 
 			symbols.T_10, 
 			symbols.T_2, 
-			symbols.NT_LogQuery, 
-			symbols.T_7, 
+			symbols.T_13, 
+			symbols.T_3, 
+			symbols.T_2, 
 			symbols.T_11, 
+			symbols.T_2, 
+			symbols.NT_LogQuery, 
 			symbols.T_8, 
+			symbols.T_12, 
+			symbols.T_9, 
 			symbols.T_3, 
 			symbols.T_3,
 		}, 
 		MetricQuery0R14, 
+	},
+	NestedLabelKey0R0: {
+		symbols.NT_NestedLabelKey, 0, 0, 
+		symbols.Symbols{  
+			symbols.T_16,
+		}, 
+		NestedLabelKey0R0, 
+	},
+	NestedLabelKey0R1: {
+		symbols.NT_NestedLabelKey, 0, 1, 
+		symbols.Symbols{  
+			symbols.T_16,
+		}, 
+		NestedLabelKey0R1, 
+	},
+	NestedLabelKey1R0: {
+		symbols.NT_NestedLabelKey, 1, 0, 
+		symbols.Symbols{  
+			symbols.T_16, 
+			symbols.T_5, 
+			symbols.NT_NestedLabelKey,
+		}, 
+		NestedLabelKey1R0, 
+	},
+	NestedLabelKey1R1: {
+		symbols.NT_NestedLabelKey, 1, 1, 
+		symbols.Symbols{  
+			symbols.T_16, 
+			symbols.T_5, 
+			symbols.NT_NestedLabelKey,
+		}, 
+		NestedLabelKey1R1, 
+	},
+	NestedLabelKey1R2: {
+		symbols.NT_NestedLabelKey, 1, 2, 
+		symbols.Symbols{  
+			symbols.T_16, 
+			symbols.T_5, 
+			symbols.NT_NestedLabelKey,
+		}, 
+		NestedLabelKey1R2, 
+	},
+	NestedLabelKey1R3: {
+		symbols.NT_NestedLabelKey, 1, 3, 
+		symbols.Symbols{  
+			symbols.T_16, 
+			symbols.T_5, 
+			symbols.NT_NestedLabelKey,
+		}, 
+		NestedLabelKey1R3, 
+	},
+	Pipeline0R0: {
+		symbols.NT_Pipeline, 0, 0, 
+		symbols.Symbols{  
+			symbols.NT_LineFilter,
+		}, 
+		Pipeline0R0, 
+	},
+	Pipeline0R1: {
+		symbols.NT_Pipeline, 0, 1, 
+		symbols.Symbols{  
+			symbols.NT_LineFilter,
+		}, 
+		Pipeline0R1, 
+	},
+	Pipeline1R0: {
+		symbols.NT_Pipeline, 1, 0, 
+		symbols.Symbols{  
+			symbols.NT_LabelFilter,
+		}, 
+		Pipeline1R0, 
+	},
+	Pipeline1R1: {
+		symbols.NT_Pipeline, 1, 1, 
+		symbols.Symbols{  
+			symbols.NT_LabelFilter,
+		}, 
+		Pipeline1R1, 
+	},
+	Pipelines0R0: {
+		symbols.NT_Pipelines, 0, 0, 
+		symbols.Symbols{  
+			symbols.NT_Pipeline,
+		}, 
+		Pipelines0R0, 
+	},
+	Pipelines0R1: {
+		symbols.NT_Pipelines, 0, 1, 
+		symbols.Symbols{  
+			symbols.NT_Pipeline,
+		}, 
+		Pipelines0R1, 
+	},
+	Pipelines1R0: {
+		symbols.NT_Pipelines, 1, 0, 
+		symbols.Symbols{  
+			symbols.NT_Pipeline, 
+			symbols.NT_Pipelines,
+		}, 
+		Pipelines1R0, 
+	},
+	Pipelines1R1: {
+		symbols.NT_Pipelines, 1, 1, 
+		symbols.Symbols{  
+			symbols.NT_Pipeline, 
+			symbols.NT_Pipelines,
+		}, 
+		Pipelines1R1, 
+	},
+	Pipelines1R2: {
+		symbols.NT_Pipelines, 1, 2, 
+		symbols.Symbols{  
+			symbols.NT_Pipeline, 
+			symbols.NT_Pipelines,
+		}, 
+		Pipelines1R2, 
+	},
+	PipelinesMaybe0R0: {
+		symbols.NT_PipelinesMaybe, 0, 0, 
+		symbols.Symbols{ 
+		}, 
+		PipelinesMaybe0R0, 
+	},
+	PipelinesMaybe1R0: {
+		symbols.NT_PipelinesMaybe, 1, 0, 
+		symbols.Symbols{  
+			symbols.NT_Pipelines,
+		}, 
+		PipelinesMaybe1R0, 
+	},
+	PipelinesMaybe1R1: {
+		symbols.NT_PipelinesMaybe, 1, 1, 
+		symbols.Symbols{  
+			symbols.NT_Pipelines,
+		}, 
+		PipelinesMaybe1R1, 
 	},
 	Query0R0: {
 		symbols.NT_Query, 0, 0, 
@@ -699,6 +1033,11 @@ var slots = map[Label]*Slot{
 }
 
 var slotIndex = map[Index]Label { 
+	Index{ symbols.NT_LabelFilter,0,0 }: LabelFilter0R0,
+	Index{ symbols.NT_LabelFilter,0,1 }: LabelFilter0R1,
+	Index{ symbols.NT_LabelFilter,0,2 }: LabelFilter0R2,
+	Index{ symbols.NT_LabelFilter,0,3 }: LabelFilter0R3,
+	Index{ symbols.NT_LabelFilter,0,4 }: LabelFilter0R4,
 	Index{ symbols.NT_LabelKey,0,0 }: LabelKey0R0,
 	Index{ symbols.NT_LabelKey,0,1 }: LabelKey0R1,
 	Index{ symbols.NT_LabelOp,0,0 }: LabelOp0R0,
@@ -711,8 +1050,20 @@ var slotIndex = map[Index]Label {
 	Index{ symbols.NT_LabelOp,3,1 }: LabelOp3R1,
 	Index{ symbols.NT_LabelValue,0,0 }: LabelValue0R0,
 	Index{ symbols.NT_LabelValue,0,1 }: LabelValue0R1,
+	Index{ symbols.NT_LineFilter,0,0 }: LineFilter0R0,
+	Index{ symbols.NT_LineFilter,0,1 }: LineFilter0R1,
+	Index{ symbols.NT_LineFilter,0,2 }: LineFilter0R2,
+	Index{ symbols.NT_LineFilterOp,0,0 }: LineFilterOp0R0,
+	Index{ symbols.NT_LineFilterOp,0,1 }: LineFilterOp0R1,
+	Index{ symbols.NT_LineFilterOp,1,0 }: LineFilterOp1R0,
+	Index{ symbols.NT_LineFilterOp,1,1 }: LineFilterOp1R1,
+	Index{ symbols.NT_LineFilterOp,2,0 }: LineFilterOp2R0,
+	Index{ symbols.NT_LineFilterOp,2,1 }: LineFilterOp2R1,
+	Index{ symbols.NT_LineFilterOp,3,0 }: LineFilterOp3R0,
+	Index{ symbols.NT_LineFilterOp,3,1 }: LineFilterOp3R1,
 	Index{ symbols.NT_LogQuery,0,0 }: LogQuery0R0,
 	Index{ symbols.NT_LogQuery,0,1 }: LogQuery0R1,
+	Index{ symbols.NT_LogQuery,0,2 }: LogQuery0R2,
 	Index{ symbols.NT_LogSelector,0,0 }: LogSelector0R0,
 	Index{ symbols.NT_LogSelector,0,1 }: LogSelector0R1,
 	Index{ symbols.NT_LogSelector,0,2 }: LogSelector0R2,
@@ -727,6 +1078,9 @@ var slotIndex = map[Index]Label {
 	Index{ symbols.NT_LogSelectorMembers,1,1 }: LogSelectorMembers1R1,
 	Index{ symbols.NT_LogSelectorMembers,1,2 }: LogSelectorMembers1R2,
 	Index{ symbols.NT_LogSelectorMembers,1,3 }: LogSelectorMembers1R3,
+	Index{ symbols.NT_LogSelectorMembersMaybe,0,0 }: LogSelectorMembersMaybe0R0,
+	Index{ symbols.NT_LogSelectorMembersMaybe,1,0 }: LogSelectorMembersMaybe1R0,
+	Index{ symbols.NT_LogSelectorMembersMaybe,1,1 }: LogSelectorMembersMaybe1R1,
 	Index{ symbols.NT_MetricQuery,0,0 }: MetricQuery0R0,
 	Index{ symbols.NT_MetricQuery,0,1 }: MetricQuery0R1,
 	Index{ symbols.NT_MetricQuery,0,2 }: MetricQuery0R2,
@@ -742,6 +1096,24 @@ var slotIndex = map[Index]Label {
 	Index{ symbols.NT_MetricQuery,0,12 }: MetricQuery0R12,
 	Index{ symbols.NT_MetricQuery,0,13 }: MetricQuery0R13,
 	Index{ symbols.NT_MetricQuery,0,14 }: MetricQuery0R14,
+	Index{ symbols.NT_NestedLabelKey,0,0 }: NestedLabelKey0R0,
+	Index{ symbols.NT_NestedLabelKey,0,1 }: NestedLabelKey0R1,
+	Index{ symbols.NT_NestedLabelKey,1,0 }: NestedLabelKey1R0,
+	Index{ symbols.NT_NestedLabelKey,1,1 }: NestedLabelKey1R1,
+	Index{ symbols.NT_NestedLabelKey,1,2 }: NestedLabelKey1R2,
+	Index{ symbols.NT_NestedLabelKey,1,3 }: NestedLabelKey1R3,
+	Index{ symbols.NT_Pipeline,0,0 }: Pipeline0R0,
+	Index{ symbols.NT_Pipeline,0,1 }: Pipeline0R1,
+	Index{ symbols.NT_Pipeline,1,0 }: Pipeline1R0,
+	Index{ symbols.NT_Pipeline,1,1 }: Pipeline1R1,
+	Index{ symbols.NT_Pipelines,0,0 }: Pipelines0R0,
+	Index{ symbols.NT_Pipelines,0,1 }: Pipelines0R1,
+	Index{ symbols.NT_Pipelines,1,0 }: Pipelines1R0,
+	Index{ symbols.NT_Pipelines,1,1 }: Pipelines1R1,
+	Index{ symbols.NT_Pipelines,1,2 }: Pipelines1R2,
+	Index{ symbols.NT_PipelinesMaybe,0,0 }: PipelinesMaybe0R0,
+	Index{ symbols.NT_PipelinesMaybe,1,0 }: PipelinesMaybe1R0,
+	Index{ symbols.NT_PipelinesMaybe,1,1 }: PipelinesMaybe1R1,
 	Index{ symbols.NT_Query,0,0 }: Query0R0,
 	Index{ symbols.NT_Query,0,1 }: Query0R1,
 	Index{ symbols.NT_Query,1,0 }: Query1R0,
@@ -752,11 +1124,19 @@ var alternates = map[symbols.NT][]Label{
 	symbols.NT_Query:[]Label{ Query0R0,Query1R0 },
 	symbols.NT_LogQuery:[]Label{ LogQuery0R0 },
 	symbols.NT_LogSelector:[]Label{ LogSelector0R0 },
+	symbols.NT_LogSelectorMembersMaybe:[]Label{ LogSelectorMembersMaybe0R0,LogSelectorMembersMaybe1R0 },
 	symbols.NT_LogSelectorMembers:[]Label{ LogSelectorMembers0R0,LogSelectorMembers1R0 },
 	symbols.NT_LogSelectorMember:[]Label{ LogSelectorMember0R0 },
-	symbols.NT_LabelOp:[]Label{ LabelOp0R0,LabelOp1R0,LabelOp2R0,LabelOp3R0 },
 	symbols.NT_LabelKey:[]Label{ LabelKey0R0 },
+	symbols.NT_LabelOp:[]Label{ LabelOp0R0,LabelOp1R0,LabelOp2R0,LabelOp3R0 },
 	symbols.NT_LabelValue:[]Label{ LabelValue0R0 },
+	symbols.NT_PipelinesMaybe:[]Label{ PipelinesMaybe0R0,PipelinesMaybe1R0 },
+	symbols.NT_Pipelines:[]Label{ Pipelines0R0,Pipelines1R0 },
+	symbols.NT_Pipeline:[]Label{ Pipeline0R0,Pipeline1R0 },
+	symbols.NT_LineFilter:[]Label{ LineFilter0R0 },
+	symbols.NT_LineFilterOp:[]Label{ LineFilterOp0R0,LineFilterOp1R0,LineFilterOp2R0,LineFilterOp3R0 },
+	symbols.NT_LabelFilter:[]Label{ LabelFilter0R0 },
+	symbols.NT_NestedLabelKey:[]Label{ NestedLabelKey0R0,NestedLabelKey1R0 },
 	symbols.NT_MetricQuery:[]Label{ MetricQuery0R0 },
 }
 

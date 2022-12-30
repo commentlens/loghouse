@@ -140,19 +140,23 @@ const(
     T_2  // ( 
     T_3  // ) 
     T_4  // , 
-    T_5  // = 
-    T_6  // =~ 
-    T_7  // [ 
-    T_8  // ] 
-    T_9  // by 
-    T_10  // count_over_time 
-    T_11  // duration 
-    T_12  // level 
-    T_13  // string 
-    T_14  // sum 
-    T_15  // var_name 
-    T_16  // { 
-    T_17  // } 
+    T_5  // . 
+    T_6  // = 
+    T_7  // =~ 
+    T_8  // [ 
+    T_9  // ] 
+    T_10  // by 
+    T_11  // count_over_time 
+    T_12  // duration 
+    T_13  // level 
+    T_14  // string 
+    T_15  // sum 
+    T_16  // var_name 
+    T_17  // { 
+    T_18  // | 
+    T_19  // |= 
+    T_20  // |~ 
+    T_21  // } 
 )
 
 var TypeToString = []string{ 
@@ -176,6 +180,10 @@ var TypeToString = []string{
     "T_15",
     "T_16",
     "T_17",
+    "T_18",
+    "T_19",
+    "T_20",
+    "T_21",
 }
 
 var StringToType = map[string] Type { 
@@ -199,6 +207,10 @@ var StringToType = map[string] Type {
     "T_15" : T_15, 
     "T_16" : T_16, 
     "T_17" : T_17, 
+    "T_18" : T_18, 
+    "T_19" : T_19, 
+    "T_20" : T_20, 
+    "T_21" : T_21, 
 }
 
 var TypeToID = []string { 
@@ -209,6 +221,7 @@ var TypeToID = []string {
     "(", 
     ")", 
     ",", 
+    ".", 
     "=", 
     "=~", 
     "[", 
@@ -221,6 +234,9 @@ var TypeToID = []string {
     "sum", 
     "var_name", 
     "{", 
+    "|", 
+    "|=", 
+    "|~", 
     "}", 
 }
 
@@ -232,22 +248,30 @@ var IDToType = map[string]Type {
     "(": 4, 
     ")": 5, 
     ",": 6, 
-    "=": 7, 
-    "=~": 8, 
-    "[": 9, 
-    "]": 10, 
-    "by": 11, 
-    "count_over_time": 12, 
-    "duration": 13, 
-    "level": 14, 
-    "string": 15, 
-    "sum": 16, 
-    "var_name": 17, 
-    "{": 18, 
-    "}": 19, 
+    ".": 7, 
+    "=": 8, 
+    "=~": 9, 
+    "[": 10, 
+    "]": 11, 
+    "by": 12, 
+    "count_over_time": 13, 
+    "duration": 14, 
+    "level": 15, 
+    "string": 16, 
+    "sum": 17, 
+    "var_name": 18, 
+    "{": 19, 
+    "|": 20, 
+    "|=": 21, 
+    "|~": 22, 
+    "}": 23, 
 }
 
 var Suppress = []bool { 
+    false, 
+    false, 
+    false, 
+    false, 
     false, 
     false, 
     false, 
