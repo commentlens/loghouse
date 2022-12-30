@@ -131,9 +131,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}}, nil
 		}
 		if query.Get("direction") == "backward" {
-			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.After(es[j].Time) })
-		} else {
-			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+			reverse(es)
 		}
 		m := make(map[string][]*storage.LogEntry)
 		for _, e := range es {
@@ -175,6 +173,13 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		Status: "success",
 		Data:   data,
 	})
+}
+
+func reverse(s []*storage.LogEntry) {
+	for i := 0; i < len(s)/2; i++ {
+		j := len(s) - i - 1
+		s[i], s[j] = s[j], s[i]
+	}
 }
 
 type LabelResponse struct {
