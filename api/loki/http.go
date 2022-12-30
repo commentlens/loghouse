@@ -137,17 +137,29 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		} else {
 			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 		}
-		var values [][]string
+		m := make(map[string][]*storage.LogEntry)
 		for _, e := range es {
-			values = append(values, []string{
-				fmt.Sprint(e.Time.UnixNano()),
-				string(e.Data),
+			h, err := storage.HashLabels(e.Labels)
+			if err != nil {
+				return nil, err
+			}
+			m[h] = append(m[h], e)
+		}
+		var streams []*Stream
+		for _, es := range m {
+			var values [][]string
+			for _, e := range es {
+				values = append(values, []string{
+					fmt.Sprint(e.Time.UnixNano()),
+					string(e.Data),
+				})
+			}
+			streams = append(streams, &Stream{
+				Stream: es[0].Labels,
+				Values: values,
 			})
 		}
-		return []*Stream{{
-			Stream: ropts.Labels,
-			Values: values,
-		}}, nil
+		return streams, nil
 	}()
 	var data QueryResponseData
 	switch result := result.(type) {
