@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/commentlens/loghouse/api/loki/logql/lexer"
+	"github.com/commentlens/loghouse/api/loki/logql/parser"
 	"github.com/commentlens/loghouse/storage"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -79,6 +81,18 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			end = time.Unix(0, int64(nsec))
 		}
+		expr := query.Get("query")
+		lex := lexer.New([]rune(expr))
+		q, errs := parser.Parse(lex)
+		if len(errs) > 0 {
+			spew.Dump(errs)
+			return nil, fmt.Errorf("logql: parse query %q", expr)
+		}
+		if q.IsAmbiguous() {
+			q.ReportAmbiguous()
+			return nil, fmt.Errorf("logql: ambiguous query %q", expr)
+		}
+		root := q.GetRoot()
 		ropts := &storage.ReadOptions{
 			Start: start,
 			End:   end,
@@ -88,8 +102,9 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil {
 			return nil, err
 		}
-		if stepRaw, expr := query.Get("step"), query.Get("query"); stepRaw != "" && strings.Contains(expr, "[") {
-			step, err := time.ParseDuration(stepRaw)
+		isHistogram := root.Alternate() == 1
+		if isHistogram {
+			step, err := time.ParseDuration(query.Get("step"))
 			if err != nil {
 				return nil, err
 			}
