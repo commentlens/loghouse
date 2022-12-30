@@ -21,6 +21,7 @@ type NT int
 const( 
 	NT_LabelFilter NT = iota
 	NT_LabelFilterOp 
+	NT_LabelFilterValue 
 	NT_LabelKey 
 	NT_LineFilter 
 	NT_LineFilterOp 
@@ -53,20 +54,19 @@ const(
 	T_9  // =~ 
 	T_10  // > 
 	T_11  // >= 
-	T_12  // [ 
-	T_13  // ] 
-	T_14  // by 
-	T_15  // count_over_time 
-	T_16  // duration 
-	T_17  // level 
-	T_18  // string 
-	T_19  // sum 
-	T_20  // var_name 
-	T_21  // { 
-	T_22  // | 
-	T_23  // |= 
-	T_24  // |~ 
-	T_25  // } 
+	T_12  // by 
+	T_13  // count_over_time 
+	T_14  // duration 
+	T_15  // float 
+	T_16  // level 
+	T_17  // string 
+	T_18  // sum 
+	T_19  // var_name 
+	T_20  // { 
+	T_21  // | 
+	T_22  // |= 
+	T_23  // |~ 
+	T_24  // } 
 )
 
 type Symbols []Symbol
@@ -136,6 +136,7 @@ func ToNT(sym string) NT {
 var ntToString = []string { 
 	"LabelFilter", /* NT_LabelFilter */
 	"LabelFilterOp", /* NT_LabelFilterOp */
+	"LabelFilterValue", /* NT_LabelFilterValue */
 	"LabelKey", /* NT_LabelKey */
 	"LineFilter", /* NT_LineFilter */
 	"LineFilterOp", /* NT_LineFilterOp */
@@ -166,25 +167,25 @@ var tToString = []string {
 	"=~", /* T_9 */
 	">", /* T_10 */
 	">=", /* T_11 */
-	"[", /* T_12 */
-	"]", /* T_13 */
-	"by", /* T_14 */
-	"count_over_time", /* T_15 */
-	"duration", /* T_16 */
-	"level", /* T_17 */
-	"string", /* T_18 */
-	"sum", /* T_19 */
-	"var_name", /* T_20 */
-	"{", /* T_21 */
-	"|", /* T_22 */
-	"|=", /* T_23 */
-	"|~", /* T_24 */
-	"}", /* T_25 */ 
+	"by", /* T_12 */
+	"count_over_time", /* T_13 */
+	"duration", /* T_14 */
+	"float", /* T_15 */
+	"level", /* T_16 */
+	"string", /* T_17 */
+	"sum", /* T_18 */
+	"var_name", /* T_19 */
+	"{", /* T_20 */
+	"|", /* T_21 */
+	"|=", /* T_22 */
+	"|~", /* T_23 */
+	"}", /* T_24 */ 
 }
 
 var stringNT = map[string]NT{ 
 	"LabelFilter":NT_LabelFilter,
 	"LabelFilterOp":NT_LabelFilterOp,
+	"LabelFilterValue":NT_LabelFilterValue,
 	"LabelKey":NT_LabelKey,
 	"LineFilter":NT_LineFilter,
 	"LineFilterOp":NT_LineFilterOp,

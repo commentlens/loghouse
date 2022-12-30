@@ -147,20 +147,19 @@ const(
     T_9  // =~ 
     T_10  // > 
     T_11  // >= 
-    T_12  // [ 
-    T_13  // ] 
-    T_14  // by 
-    T_15  // count_over_time 
-    T_16  // duration 
-    T_17  // level 
-    T_18  // string 
-    T_19  // sum 
-    T_20  // var_name 
-    T_21  // { 
-    T_22  // | 
-    T_23  // |= 
-    T_24  // |~ 
-    T_25  // } 
+    T_12  // by 
+    T_13  // count_over_time 
+    T_14  // duration 
+    T_15  // float 
+    T_16  // level 
+    T_17  // string 
+    T_18  // sum 
+    T_19  // var_name 
+    T_20  // { 
+    T_21  // | 
+    T_22  // |= 
+    T_23  // |~ 
+    T_24  // } 
 )
 
 var TypeToString = []string{ 
@@ -191,7 +190,6 @@ var TypeToString = []string{
     "T_22",
     "T_23",
     "T_24",
-    "T_25",
 }
 
 var StringToType = map[string] Type { 
@@ -222,7 +220,6 @@ var StringToType = map[string] Type {
     "T_22" : T_22, 
     "T_23" : T_23, 
     "T_24" : T_24, 
-    "T_25" : T_25, 
 }
 
 var TypeToID = []string { 
@@ -240,11 +237,10 @@ var TypeToID = []string {
     "=~", 
     ">", 
     ">=", 
-    "[", 
-    "]", 
     "by", 
     "count_over_time", 
     "duration", 
+    "float", 
     "level", 
     "string", 
     "sum", 
@@ -271,24 +267,22 @@ var IDToType = map[string]Type {
     "=~": 11, 
     ">": 12, 
     ">=": 13, 
-    "[": 14, 
-    "]": 15, 
-    "by": 16, 
-    "count_over_time": 17, 
-    "duration": 18, 
-    "level": 19, 
-    "string": 20, 
-    "sum": 21, 
-    "var_name": 22, 
-    "{": 23, 
-    "|": 24, 
-    "|=": 25, 
-    "|~": 26, 
-    "}": 27, 
+    "by": 14, 
+    "count_over_time": 15, 
+    "duration": 16, 
+    "float": 17, 
+    "level": 18, 
+    "string": 19, 
+    "sum": 20, 
+    "var_name": 21, 
+    "{": 22, 
+    "|": 23, 
+    "|=": 24, 
+    "|~": 25, 
+    "}": 26, 
 }
 
 var Suppress = []bool { 
-    false, 
     false, 
     false, 
     false, 

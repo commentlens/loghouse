@@ -110,10 +110,13 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, root bsr.BSR) ([
 			}
 			key := strings.Join(keyParts, "")
 			op := node.GetNTChildI(2).GetTChildI(0).LiteralString()
-			val := node.GetTChildI(3).LiteralString()
-			val, err := strconv.Unquote(val)
-			if err != nil {
-				return
+			val := node.GetNTChildI(3).GetTChildI(0).LiteralString()
+			if strings.ContainsAny(val, "`\"") {
+				var err error
+				val, err = strconv.Unquote(val)
+				if err != nil {
+					return
+				}
 			}
 			switch op {
 			case "=":
