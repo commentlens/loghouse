@@ -125,37 +125,6 @@ func TestFilterLabelMismatch(t *testing.T) {
 	require.Len(t, out, 0)
 }
 
-func TestFilterLimit(t *testing.T) {
-	es := []*LogEntry{
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
-		},
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
-		},
-	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app":  "test",
-			"role": "test2",
-		},
-		Limit: 1,
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 1)
-}
-
 func TestFilterTime(t *testing.T) {
 	es := []*LogEntry{
 		{

@@ -150,6 +150,9 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 		}
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+	if opts.Limit > 0 && uint64(len(es)) > opts.Limit {
+		es = es[:opts.Limit]
+	}
 	return es, nil
 }
 

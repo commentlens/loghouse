@@ -19,6 +19,7 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, root bsr.BSR) ([
 		switch node.Label.Slot().NT {
 		case symbols.NT_MetricQuery:
 			isHistogram = true
+			ropts.Limit = 0
 		case symbols.NT_LogSelectorMember:
 			key := node.GetNTChildI(0).GetTChildI(0).LiteralString()
 			op := node.GetNTChildI(1).GetTChildI(0).LiteralString()

@@ -38,9 +38,6 @@ func Filter(es []*LogEntry, opts *ReadOptions) ([]*LogEntry, error) {
 		if opts.FilterFunc != nil && !opts.FilterFunc(e) {
 			continue
 		}
-		if opts.Limit != 0 && len(out) >= int(opts.Limit) {
-			break
-		}
 		out = append(out, e)
 	}
 	return out, nil

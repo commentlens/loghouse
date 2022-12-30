@@ -88,5 +88,8 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 		out = append(out, es...)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Time.Before(out[j].Time) })
+	if opts.Limit > 0 && uint64(len(out)) > opts.Limit {
+		out = out[:opts.Limit]
+	}
 	return out, nil
 }
