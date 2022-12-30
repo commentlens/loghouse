@@ -26,6 +26,7 @@ const (
 	CompactIndexFile       = "index"
 	CompactBlobFile        = "blob"
 	CompactBlobCompression = "s2"
+	CompactBlobMaxAge      = 31 * 24 * time.Hour
 )
 
 type compactor struct{}
@@ -156,7 +157,7 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 	return es, nil
 }
 
-func writeBlobs(chunks []string) error {
+func writeBlob(chunks []string) error {
 	blobID := ulid.Make().String()
 	var bytesTotal uint64
 	for _, chunk := range chunks {
@@ -250,7 +251,7 @@ func compact() error {
 	if err != nil {
 		return err
 	}
-	err = writeBlobs(chunks)
+	err = writeBlob(chunks)
 	if err != nil {
 		return err
 	}
@@ -261,6 +262,10 @@ func compact() error {
 		}
 	}
 	err = removeEmptyDir(WriteDir, CompactChunkIdlePeriod)
+	if err != nil {
+		return err
+	}
+	err = removeOldBlob(CompactDir, CompactBlobMaxAge)
 	if err != nil {
 		return err
 	}
@@ -342,4 +347,27 @@ func removeEmptyDir(dir string, after time.Duration) error {
 		}
 	}
 	return nil
+}
+
+func removeOldBlob(dir string, after time.Duration) error {
+	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		if dir == path {
+			return nil
+		}
+		blobID, err := ulid.ParseStrict(d.Name())
+		if err != nil {
+			return nil
+		}
+		if time.Since(time.UnixMilli(int64(blobID.Time()))) < after {
+			return nil
+		}
+		os.RemoveAll(path)
+		return nil
+	})
 }
