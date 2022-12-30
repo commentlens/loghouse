@@ -10,5 +10,6 @@ RUN go build -o /tmp ./cmd/loghouse
 FROM alpine
 RUN apk add --no-cache dumb-init
 COPY --from=build /tmp/loghouse /usr/bin/
+RUN ! ldd /usr/bin/loghouse
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/bin/loghouse"]
