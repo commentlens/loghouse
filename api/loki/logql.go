@@ -156,6 +156,54 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, root bsr.BSR) ([
 					}
 					return !ok
 				})
+			case ">=":
+				filters = append(filters, func(e *storage.LogEntry) bool {
+					v := gjson.GetBytes(e.Data, key)
+					if !v.Exists() {
+						return false
+					}
+					fval, err := strconv.ParseFloat(val, 64)
+					if err != nil {
+						return false
+					}
+					return v.Float() >= fval
+				})
+			case ">":
+				filters = append(filters, func(e *storage.LogEntry) bool {
+					v := gjson.GetBytes(e.Data, key)
+					if !v.Exists() {
+						return false
+					}
+					fval, err := strconv.ParseFloat(val, 64)
+					if err != nil {
+						return false
+					}
+					return v.Float() > fval
+				})
+			case "<=":
+				filters = append(filters, func(e *storage.LogEntry) bool {
+					v := gjson.GetBytes(e.Data, key)
+					if !v.Exists() {
+						return false
+					}
+					fval, err := strconv.ParseFloat(val, 64)
+					if err != nil {
+						return false
+					}
+					return v.Float() <= fval
+				})
+			case "<":
+				filters = append(filters, func(e *storage.LogEntry) bool {
+					v := gjson.GetBytes(e.Data, key)
+					if !v.Exists() {
+						return false
+					}
+					fval, err := strconv.ParseFloat(val, 64)
+					if err != nil {
+						return false
+					}
+					return v.Float() < fval
+				})
 			}
 		}
 	})

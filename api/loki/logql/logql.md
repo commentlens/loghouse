@@ -13,17 +13,18 @@ LogQuery : LogSelector PipelinesMaybe;
 LogSelector : "{" LogSelectorMembersMaybe "}";
 LogSelectorMembersMaybe : empty | LogSelectorMembers;
 LogSelectorMembers : LogSelectorMember | LogSelectorMember "," LogSelectorMembers;
-LogSelectorMember : LabelKey LabelOp string;
+LogSelectorMember : LabelKey LogSelectorOp string;
 LabelKey : var_name;
-LabelOp : "=" | "!=" | "=~" | "!~";
+LogSelectorOp : "=" | "!=" | "=~" | "!~";
 
 PipelinesMaybe : empty | Pipelines;
 Pipelines : Pipeline | Pipeline Pipelines;
 Pipeline : LineFilter | LabelFilter;
 LineFilter : LineFilterOp string;
 LineFilterOp : "|=" | "!=" | "|~" | "!~";
-LabelFilter : "|" NestedLabelKey LabelOp string;
+LabelFilter : "|" NestedLabelKey LabelFilterOp string;
 NestedLabelKey : var_name | var_name "." NestedLabelKey;
+LabelFilterOp : "=" | "!=" | "=~" | "!~" | ">=" | ">" | "<=" | "<";
 
 MetricQuery : "sum" "by" "(" "level" ")" "(" "count_over_time" "(" LogQuery "[" duration "]" ")" ")";
 ```

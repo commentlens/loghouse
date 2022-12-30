@@ -141,22 +141,26 @@ const(
     T_3  // ) 
     T_4  // , 
     T_5  // . 
-    T_6  // = 
-    T_7  // =~ 
-    T_8  // [ 
-    T_9  // ] 
-    T_10  // by 
-    T_11  // count_over_time 
-    T_12  // duration 
-    T_13  // level 
-    T_14  // string 
-    T_15  // sum 
-    T_16  // var_name 
-    T_17  // { 
-    T_18  // | 
-    T_19  // |= 
-    T_20  // |~ 
-    T_21  // } 
+    T_6  // < 
+    T_7  // <= 
+    T_8  // = 
+    T_9  // =~ 
+    T_10  // > 
+    T_11  // >= 
+    T_12  // [ 
+    T_13  // ] 
+    T_14  // by 
+    T_15  // count_over_time 
+    T_16  // duration 
+    T_17  // level 
+    T_18  // string 
+    T_19  // sum 
+    T_20  // var_name 
+    T_21  // { 
+    T_22  // | 
+    T_23  // |= 
+    T_24  // |~ 
+    T_25  // } 
 )
 
 var TypeToString = []string{ 
@@ -184,6 +188,10 @@ var TypeToString = []string{
     "T_19",
     "T_20",
     "T_21",
+    "T_22",
+    "T_23",
+    "T_24",
+    "T_25",
 }
 
 var StringToType = map[string] Type { 
@@ -211,6 +219,10 @@ var StringToType = map[string] Type {
     "T_19" : T_19, 
     "T_20" : T_20, 
     "T_21" : T_21, 
+    "T_22" : T_22, 
+    "T_23" : T_23, 
+    "T_24" : T_24, 
+    "T_25" : T_25, 
 }
 
 var TypeToID = []string { 
@@ -222,8 +234,12 @@ var TypeToID = []string {
     ")", 
     ",", 
     ".", 
+    "<", 
+    "<=", 
     "=", 
     "=~", 
+    ">", 
+    ">=", 
     "[", 
     "]", 
     "by", 
@@ -249,25 +265,33 @@ var IDToType = map[string]Type {
     ")": 5, 
     ",": 6, 
     ".": 7, 
-    "=": 8, 
-    "=~": 9, 
-    "[": 10, 
-    "]": 11, 
-    "by": 12, 
-    "count_over_time": 13, 
-    "duration": 14, 
-    "level": 15, 
-    "string": 16, 
-    "sum": 17, 
-    "var_name": 18, 
-    "{": 19, 
-    "|": 20, 
-    "|=": 21, 
-    "|~": 22, 
-    "}": 23, 
+    "<": 8, 
+    "<=": 9, 
+    "=": 10, 
+    "=~": 11, 
+    ">": 12, 
+    ">=": 13, 
+    "[": 14, 
+    "]": 15, 
+    "by": 16, 
+    "count_over_time": 17, 
+    "duration": 18, 
+    "level": 19, 
+    "string": 20, 
+    "sum": 21, 
+    "var_name": 22, 
+    "{": 23, 
+    "|": 24, 
+    "|=": 25, 
+    "|~": 26, 
+    "}": 27, 
 }
 
 var Suppress = []bool { 
+    false, 
+    false, 
+    false, 
+    false, 
     false, 
     false, 
     false, 
