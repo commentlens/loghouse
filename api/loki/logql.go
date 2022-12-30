@@ -158,12 +158,7 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, root bsr.BSR) ([
 			}
 		}
 	})
-	es, err := r.Read(ropts)
-	if err != nil {
-		return nil, false, err
-	}
-	var out []*storage.LogEntry
-	for _, e := range es {
+	ropts.FilterFunc = func(e *storage.LogEntry) bool {
 		match := true
 		for _, filter := range filters {
 			if !filter(e) {
@@ -171,11 +166,13 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, root bsr.BSR) ([
 				break
 			}
 		}
-		if match {
-			out = append(out, e)
-		}
+		return match
 	}
-	return out, isHistogram, nil
+	es, err := r.Read(ropts)
+	if err != nil {
+		return nil, false, err
+	}
+	return es, isHistogram, nil
 }
 
 func logqlWalk(node bsr.BSR, f func(bsr.BSR)) {

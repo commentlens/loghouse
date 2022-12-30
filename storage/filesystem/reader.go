@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/commentlens/loghouse/storage"
 )
@@ -55,7 +56,11 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 				if err != nil {
 					return err
 				}
-				es = append(es, &e)
+				out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
+				if err != nil {
+					return err
+				}
+				es = append(es, out...)
 			}
 			return scanner.Err()
 		}()
@@ -63,5 +68,6 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 			return nil, err
 		}
 	}
-	return storage.Filter(es, opts)
+	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+	return es, nil
 }

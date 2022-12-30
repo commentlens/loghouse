@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"sort"
 	"time"
 )
 
@@ -10,10 +9,11 @@ type Reader interface {
 }
 
 type ReadOptions struct {
-	Labels map[string]string
-	Start  time.Time
-	End    time.Time
-	Limit  uint64
+	Labels     map[string]string
+	Start      time.Time
+	End        time.Time
+	FilterFunc func(*LogEntry) bool
+	Limit      uint64
 }
 
 func Filter(es []*LogEntry, opts *ReadOptions) ([]*LogEntry, error) {
@@ -35,11 +35,13 @@ func Filter(es []*LogEntry, opts *ReadOptions) ([]*LogEntry, error) {
 		if !opts.End.IsZero() && opts.End.Before(e.Time) {
 			continue
 		}
+		if opts.FilterFunc != nil && !opts.FilterFunc(e) {
+			continue
+		}
 		if opts.Limit != 0 && len(out) >= int(opts.Limit) {
 			break
 		}
 		out = append(out, e)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Time.Before(out[j].Time) })
 	return out, nil
 }

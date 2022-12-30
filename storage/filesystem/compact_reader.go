@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CompactReadConcurrency = 10
+	CompactReadConcurrency = 32
 )
 
 func NewCompactReader() storage.Reader {

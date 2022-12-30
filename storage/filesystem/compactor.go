@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -81,7 +82,7 @@ func newBlobReader(indexFiles []string) storage.Reader {
 }
 
 func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	var out []*storage.LogEntry
+	var es []*storage.LogEntry
 	for _, indexFile := range r.IndexFiles {
 		var indexList []*compactIndex
 		err := func() error {
@@ -131,7 +132,11 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 					if err != nil {
 						return err
 					}
-					out = append(out, &e)
+					out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
+					if err != nil {
+						return err
+					}
+					es = append(es, out...)
 				}
 				err = scanner.Err()
 				if err != nil {
@@ -144,7 +149,8 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 			return nil, err
 		}
 	}
-	return storage.Filter(out, opts)
+	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+	return es, nil
 }
 
 func writeBlobs(chunks []string) error {
