@@ -3,19 +3,46 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/commentlens/loghouse/api/loki"
 	"github.com/commentlens/loghouse/storage/filesystem"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	log := logrus.StandardLogger()
+	log.Info("started")
+	defer log.Info("stopped")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		<-c
+	}()
+
 	r := filesystem.NewCompactReader()
 	w := filesystem.NewCompactWriter()
-	go w.BackgroundCompact(context.Background())
-
-	srv := loki.NewServer(&loki.ServerOptions{
+	srv := &http.Server{Addr: ":3100", Handler: loki.NewServer(&loki.ServerOptions{
 		StorageReader: r,
 		StorageWriter: w,
+	})}
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return w.BackgroundCompact(ctx)
 	})
-	http.ListenAndServe(":3100", srv)
+	g.Go(func() error {
+		return srv.ListenAndServe()
+	})
+	g.Go(func() error {
+		<-ctx.Done()
+		return srv.Shutdown(context.Background())
+	})
+	g.Wait()
 }

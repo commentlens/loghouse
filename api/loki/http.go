@@ -33,7 +33,7 @@ func NewServer(opts *ServerOptions) http.Handler {
 	m.GET("/loki/api/v1/label/:name/values", opts.labelValues)
 	m.GET("/loki/api/v1/series", opts.series)
 	m.POST("/loki/api/v1/push", opts.push)
-	return m
+	return httpLogMiddleware(m)
 }
 
 type QueryResponse struct {
