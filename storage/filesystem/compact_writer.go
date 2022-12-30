@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	CompactInterval = 10 * time.Second
+	CompactBackgroundInterval = 10 * time.Second
 )
 
 func NewCompactWriter() interface {
@@ -26,7 +26,7 @@ type compactWriter struct {
 }
 
 func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
-	ticker := time.NewTicker(CompactInterval)
+	ticker := time.NewTicker(CompactBackgroundInterval)
 	defer ticker.Stop()
 
 	for {

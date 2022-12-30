@@ -19,13 +19,13 @@ import (
 )
 
 const (
-	CompactDir         = "data/compact"
-	CompactChunkFile   = "chunk.jsonl.tmp"
-	CompactIndexFile   = "index"
-	CompactBlobFile    = "blob"
-	CompactMaxAge      = 6 * time.Hour
-	CompactMaxSize     = 1024 * 1024 * 100
-	CompactCompression = "s2"
+	CompactDir             = "data/compact"
+	CompactChunkFile       = "chunk.jsonl.tmp"
+	CompactChunkIdlePeriod = 6 * time.Hour
+	CompactChunkMaxSize    = 1024 * 1024 * 100
+	CompactIndexFile       = "index"
+	CompactBlobFile        = "blob"
+	CompactBlobCompression = "s2"
 )
 
 type compactor struct{}
@@ -120,7 +120,7 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 			}
 			defer f.Close()
 			for _, index := range indexList {
-				var r io.Reader = io.NewSectionReader(f, int64(index.BytesStart), int64(index.BytesEnd-index.BytesStart))
+				var r io.Reader = io.NewSectionReader(f, int64(index.BytesStart), int64(index.BytesEnd)-int64(index.BytesStart))
 				switch index.Compression {
 				case "s2":
 					r = s2.NewReader(r)
@@ -169,7 +169,7 @@ func writeBlobs(chunks []string) error {
 			continue
 		}
 		buf := new(bytes.Buffer)
-		compression := CompactCompression
+		compression := CompactBlobCompression
 		var w io.Writer = buf
 		switch compression {
 		case "s2":
@@ -236,7 +236,7 @@ func writeBlobs(chunks []string) error {
 			return err
 		}
 		bytesTotal += uint64(buf.Len())
-		if bytesTotal < CompactMaxSize {
+		if bytesTotal < CompactChunkMaxSize {
 			continue
 		}
 		blobID = ulid.Make().String()
@@ -260,7 +260,7 @@ func compact() error {
 			return err
 		}
 	}
-	err = removeEmptyDir(WriteDir, CompactMaxAge)
+	err = removeEmptyDir(WriteDir, CompactChunkIdlePeriod)
 	if err != nil {
 		return err
 	}
@@ -272,10 +272,10 @@ func chunkCompactible(chunk string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if time.Since(finfo.ModTime()) >= CompactMaxAge {
+	if time.Since(finfo.ModTime()) >= CompactChunkIdlePeriod {
 		return true, nil
 	}
-	if finfo.Size() >= CompactMaxSize {
+	if finfo.Size() >= CompactChunkMaxSize {
 		return true, nil
 	}
 	return false, nil

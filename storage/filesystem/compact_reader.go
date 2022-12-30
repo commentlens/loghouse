@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CompactReadConcurrency = 32
+	CompactReaderConcurrency = 32
 )
 
 func NewCompactReader() storage.Reader {
@@ -26,7 +26,7 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 	})
 	chOut := make(chan []*storage.LogEntry)
 
-	for i := 0; i < CompactReadConcurrency; i++ {
+	for i := 0; i < CompactReaderConcurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

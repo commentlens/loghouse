@@ -36,7 +36,7 @@ func markChunkCompactible() error {
 		if err != nil {
 			return nil
 		}
-		oldTime := time.Now().Add(-2 * CompactMaxAge)
+		oldTime := time.Now().Add(-2 * CompactChunkIdlePeriod)
 		return os.Chtimes(path, oldTime, oldTime)
 	})
 }
@@ -217,7 +217,7 @@ func TestCompactReadWriter(t *testing.T) {
 	require.NoError(t, err)
 	require.ElementsMatch(t, es, esRead)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*CompactInterval)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*CompactBackgroundInterval)
 	defer cancel()
 
 	err = w.BackgroundCompact(ctx)
