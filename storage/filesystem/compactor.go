@@ -22,7 +22,7 @@ const (
 	CompactChunkFile   = "chunk.jsonl.tmp"
 	CompactIndexFile   = "index"
 	CompactBlobFile    = "blob"
-	CompactMaxAge      = time.Hour
+	CompactMaxAge      = 6 * time.Hour
 	CompactMaxSize     = 1024 * 1024 * 100
 	CompactCompression = "s2"
 )
@@ -263,7 +263,7 @@ func chunkCompactible(chunk string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if time.Since(finfo.ModTime()) >= time.Hour {
+	if time.Since(finfo.ModTime()) >= CompactMaxAge {
 		return true, nil
 	}
 	if finfo.Size() >= CompactMaxSize {

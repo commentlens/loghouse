@@ -10,7 +10,7 @@ import (
 
 const (
 	WriteDir       = "data/incompact"
-	WriteTimeDir   = "2006-01-02-15"
+	WriteTimeDir   = "2006-01-02"
 	WriteChunkFile = "chunk.jsonl"
 )
 
