@@ -27,8 +27,6 @@ const(
 	LabelOp2R1
 	LabelOp3R0
 	LabelOp3R1
-	LabelValue0R0
-	LabelValue0R1
 	LineFilter0R0
 	LineFilter0R1
 	LineFilter0R2
@@ -192,7 +190,7 @@ var slots = map[Label]*Slot{
 			symbols.T_18, 
 			symbols.NT_NestedLabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LabelFilter0R0, 
 	},
@@ -202,7 +200,7 @@ var slots = map[Label]*Slot{
 			symbols.T_18, 
 			symbols.NT_NestedLabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LabelFilter0R1, 
 	},
@@ -212,7 +210,7 @@ var slots = map[Label]*Slot{
 			symbols.T_18, 
 			symbols.NT_NestedLabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LabelFilter0R2, 
 	},
@@ -222,7 +220,7 @@ var slots = map[Label]*Slot{
 			symbols.T_18, 
 			symbols.NT_NestedLabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LabelFilter0R3, 
 	},
@@ -232,7 +230,7 @@ var slots = map[Label]*Slot{
 			symbols.T_18, 
 			symbols.NT_NestedLabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LabelFilter0R4, 
 	},
@@ -305,20 +303,6 @@ var slots = map[Label]*Slot{
 			symbols.T_1,
 		}, 
 		LabelOp3R1, 
-	},
-	LabelValue0R0: {
-		symbols.NT_LabelValue, 0, 0, 
-		symbols.Symbols{  
-			symbols.T_14,
-		}, 
-		LabelValue0R0, 
-	},
-	LabelValue0R1: {
-		symbols.NT_LabelValue, 0, 1, 
-		symbols.Symbols{  
-			symbols.T_14,
-		}, 
-		LabelValue0R1, 
 	},
 	LineFilter0R0: {
 		symbols.NT_LineFilter, 0, 0, 
@@ -465,7 +449,7 @@ var slots = map[Label]*Slot{
 		symbols.Symbols{  
 			symbols.NT_LabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LogSelectorMember0R0, 
 	},
@@ -474,7 +458,7 @@ var slots = map[Label]*Slot{
 		symbols.Symbols{  
 			symbols.NT_LabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LogSelectorMember0R1, 
 	},
@@ -483,7 +467,7 @@ var slots = map[Label]*Slot{
 		symbols.Symbols{  
 			symbols.NT_LabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LogSelectorMember0R2, 
 	},
@@ -492,7 +476,7 @@ var slots = map[Label]*Slot{
 		symbols.Symbols{  
 			symbols.NT_LabelKey, 
 			symbols.NT_LabelOp, 
-			symbols.NT_LabelValue,
+			symbols.T_14,
 		}, 
 		LogSelectorMember0R3, 
 	},
@@ -1048,8 +1032,6 @@ var slotIndex = map[Index]Label {
 	Index{ symbols.NT_LabelOp,2,1 }: LabelOp2R1,
 	Index{ symbols.NT_LabelOp,3,0 }: LabelOp3R0,
 	Index{ symbols.NT_LabelOp,3,1 }: LabelOp3R1,
-	Index{ symbols.NT_LabelValue,0,0 }: LabelValue0R0,
-	Index{ symbols.NT_LabelValue,0,1 }: LabelValue0R1,
 	Index{ symbols.NT_LineFilter,0,0 }: LineFilter0R0,
 	Index{ symbols.NT_LineFilter,0,1 }: LineFilter0R1,
 	Index{ symbols.NT_LineFilter,0,2 }: LineFilter0R2,
@@ -1129,7 +1111,6 @@ var alternates = map[symbols.NT][]Label{
 	symbols.NT_LogSelectorMember:[]Label{ LogSelectorMember0R0 },
 	symbols.NT_LabelKey:[]Label{ LabelKey0R0 },
 	symbols.NT_LabelOp:[]Label{ LabelOp0R0,LabelOp1R0,LabelOp2R0,LabelOp3R0 },
-	symbols.NT_LabelValue:[]Label{ LabelValue0R0 },
 	symbols.NT_PipelinesMaybe:[]Label{ PipelinesMaybe0R0,PipelinesMaybe1R0 },
 	symbols.NT_Pipelines:[]Label{ Pipelines0R0,Pipelines1R0 },
 	symbols.NT_Pipeline:[]Label{ Pipeline0R0,Pipeline1R0 },

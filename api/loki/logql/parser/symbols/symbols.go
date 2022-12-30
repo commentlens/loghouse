@@ -22,7 +22,6 @@ const(
 	NT_LabelFilter NT = iota
 	NT_LabelKey 
 	NT_LabelOp 
-	NT_LabelValue 
 	NT_LineFilter 
 	NT_LineFilterOp 
 	NT_LogQuery 
@@ -133,7 +132,6 @@ var ntToString = []string {
 	"LabelFilter", /* NT_LabelFilter */
 	"LabelKey", /* NT_LabelKey */
 	"LabelOp", /* NT_LabelOp */
-	"LabelValue", /* NT_LabelValue */
 	"LineFilter", /* NT_LineFilter */
 	"LineFilterOp", /* NT_LineFilterOp */
 	"LogQuery", /* NT_LogQuery */
@@ -178,7 +176,6 @@ var stringNT = map[string]NT{
 	"LabelFilter":NT_LabelFilter,
 	"LabelKey":NT_LabelKey,
 	"LabelOp":NT_LabelOp,
-	"LabelValue":NT_LabelValue,
 	"LineFilter":NT_LineFilter,
 	"LineFilterOp":NT_LineFilterOp,
 	"LogQuery":NT_LogQuery,

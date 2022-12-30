@@ -65,7 +65,7 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 		// p.DumpDescriptors()
 
 		switch L {
-		case slot.LabelFilter0R0: // LabelFilter : ∙| NestedLabelKey LabelOp LabelValue
+		case slot.LabelFilter0R0: // LabelFilter : ∙| NestedLabelKey LabelOp string
 
 			p.bsrSet.Add(slot.LabelFilter0R1, cU, p.cI, p.cI+1)
 			p.cI++
@@ -75,7 +75,7 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 			}
 
 			p.call(slot.LabelFilter0R2, cU, p.cI)
-		case slot.LabelFilter0R2: // LabelFilter : | NestedLabelKey ∙LabelOp LabelValue
+		case slot.LabelFilter0R2: // LabelFilter : | NestedLabelKey ∙LabelOp string
 
 			if !p.testSelect(slot.LabelFilter0R2) {
 				p.parseError(slot.LabelFilter0R2, p.cI, first[slot.LabelFilter0R2])
@@ -83,16 +83,15 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 			}
 
 			p.call(slot.LabelFilter0R3, cU, p.cI)
-		case slot.LabelFilter0R3: // LabelFilter : | NestedLabelKey LabelOp ∙LabelValue
+		case slot.LabelFilter0R3: // LabelFilter : | NestedLabelKey LabelOp ∙string
 
 			if !p.testSelect(slot.LabelFilter0R3) {
 				p.parseError(slot.LabelFilter0R3, p.cI, first[slot.LabelFilter0R3])
 				break
 			}
 
-			p.call(slot.LabelFilter0R4, cU, p.cI)
-		case slot.LabelFilter0R4: // LabelFilter : | NestedLabelKey LabelOp LabelValue ∙
-
+			p.bsrSet.Add(slot.LabelFilter0R4, cU, p.cI, p.cI+1)
+			p.cI++
 			if p.follow(symbols.NT_LabelFilter) {
 				p.rtn(symbols.NT_LabelFilter, cU, p.cI)
 			} else {
@@ -142,15 +141,6 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 				p.rtn(symbols.NT_LabelOp, cU, p.cI)
 			} else {
 				p.parseError(slot.LabelOp3R0, p.cI, followSets[symbols.NT_LabelOp])
-			}
-		case slot.LabelValue0R0: // LabelValue : ∙string
-
-			p.bsrSet.Add(slot.LabelValue0R1, cU, p.cI, p.cI+1)
-			p.cI++
-			if p.follow(symbols.NT_LabelValue) {
-				p.rtn(symbols.NT_LabelValue, cU, p.cI)
-			} else {
-				p.parseError(slot.LabelValue0R0, p.cI, followSets[symbols.NT_LabelValue])
 			}
 		case slot.LineFilter0R0: // LineFilter : ∙LineFilterOp string
 
@@ -247,10 +237,10 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 			} else {
 				p.parseError(slot.LogSelector0R0, p.cI, followSets[symbols.NT_LogSelector])
 			}
-		case slot.LogSelectorMember0R0: // LogSelectorMember : ∙LabelKey LabelOp LabelValue
+		case slot.LogSelectorMember0R0: // LogSelectorMember : ∙LabelKey LabelOp string
 
 			p.call(slot.LogSelectorMember0R1, cU, p.cI)
-		case slot.LogSelectorMember0R1: // LogSelectorMember : LabelKey ∙LabelOp LabelValue
+		case slot.LogSelectorMember0R1: // LogSelectorMember : LabelKey ∙LabelOp string
 
 			if !p.testSelect(slot.LogSelectorMember0R1) {
 				p.parseError(slot.LogSelectorMember0R1, p.cI, first[slot.LogSelectorMember0R1])
@@ -258,16 +248,15 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 			}
 
 			p.call(slot.LogSelectorMember0R2, cU, p.cI)
-		case slot.LogSelectorMember0R2: // LogSelectorMember : LabelKey LabelOp ∙LabelValue
+		case slot.LogSelectorMember0R2: // LogSelectorMember : LabelKey LabelOp ∙string
 
 			if !p.testSelect(slot.LogSelectorMember0R2) {
 				p.parseError(slot.LogSelectorMember0R2, p.cI, first[slot.LogSelectorMember0R2])
 				break
 			}
 
-			p.call(slot.LogSelectorMember0R3, cU, p.cI)
-		case slot.LogSelectorMember0R3: // LogSelectorMember : LabelKey LabelOp LabelValue ∙
-
+			p.bsrSet.Add(slot.LogSelectorMember0R3, cU, p.cI, p.cI+1)
+			p.cI++
 			if p.follow(symbols.NT_LogSelectorMember) {
 				p.rtn(symbols.NT_LogSelectorMember, cU, p.cI)
 			} else {
@@ -792,26 +781,26 @@ func (p *parser) testSelect(l slot.Label) bool {
 }
 
 var first = []map[token.Type]string{
-	// LabelFilter : ∙| NestedLabelKey LabelOp LabelValue
+	// LabelFilter : ∙| NestedLabelKey LabelOp string
 	{
 		token.T_18: "|",
 	},
-	// LabelFilter : | ∙NestedLabelKey LabelOp LabelValue
+	// LabelFilter : | ∙NestedLabelKey LabelOp string
 	{
 		token.T_16: "var_name",
 	},
-	// LabelFilter : | NestedLabelKey ∙LabelOp LabelValue
+	// LabelFilter : | NestedLabelKey ∙LabelOp string
 	{
 		token.T_0: "!=",
 		token.T_1: "!~",
 		token.T_6: "=",
 		token.T_7: "=~",
 	},
-	// LabelFilter : | NestedLabelKey LabelOp ∙LabelValue
+	// LabelFilter : | NestedLabelKey LabelOp ∙string
 	{
 		token.T_14: "string",
 	},
-	// LabelFilter : | NestedLabelKey LabelOp LabelValue ∙
+	// LabelFilter : | NestedLabelKey LabelOp string ∙
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
@@ -863,22 +852,6 @@ var first = []map[token.Type]string{
 	// LabelOp : !~ ∙
 	{
 		token.T_14: "string",
-	},
-	// LabelValue : ∙string
-	{
-		token.T_14: "string",
-	},
-	// LabelValue : string ∙
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.EOF:  "$",
-		token.T_4:  ",",
-		token.T_8:  "[",
-		token.T_18: "|",
-		token.T_19: "|=",
-		token.T_20: "|~",
-		token.T_21: "}",
 	},
 	// LineFilter : ∙LineFilterOp string
 	{
@@ -975,22 +948,22 @@ var first = []map[token.Type]string{
 		token.T_19: "|=",
 		token.T_20: "|~",
 	},
-	// LogSelectorMember : ∙LabelKey LabelOp LabelValue
+	// LogSelectorMember : ∙LabelKey LabelOp string
 	{
 		token.T_16: "var_name",
 	},
-	// LogSelectorMember : LabelKey ∙LabelOp LabelValue
+	// LogSelectorMember : LabelKey ∙LabelOp string
 	{
 		token.T_0: "!=",
 		token.T_1: "!~",
 		token.T_6: "=",
 		token.T_7: "=~",
 	},
-	// LogSelectorMember : LabelKey LabelOp ∙LabelValue
+	// LogSelectorMember : LabelKey LabelOp ∙string
 	{
 		token.T_14: "string",
 	},
-	// LogSelectorMember : LabelKey LabelOp LabelValue ∙
+	// LogSelectorMember : LabelKey LabelOp string ∙
 	{
 		token.T_4:  ",",
 		token.T_21: "}",
@@ -1243,18 +1216,6 @@ var followSets = []map[token.Type]string{
 	// LabelOp
 	{
 		token.T_14: "string",
-	},
-	// LabelValue
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.EOF:  "$",
-		token.T_4:  ",",
-		token.T_8:  "[",
-		token.T_18: "|",
-		token.T_19: "|=",
-		token.T_20: "|~",
-		token.T_21: "}",
 	},
 	// LineFilter
 	{

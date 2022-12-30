@@ -92,17 +92,16 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			q.ReportAmbiguous()
 			return nil, fmt.Errorf("logql: ambiguous query %q", expr)
 		}
-		root := q.GetRoot()
-		ropts := &storage.ReadOptions{
-			Start: start,
-			End:   end,
-			Limit: ReadLimit,
-		}
-		es, err := opts.StorageReader.Read(ropts)
+		es, isHistogram, err := logqlRead(opts.StorageReader, func() *storage.ReadOptions {
+			return &storage.ReadOptions{
+				Start: start,
+				End:   end,
+				Limit: ReadLimit,
+			}
+		}, q.GetRoot())
 		if err != nil {
 			return nil, err
 		}
-		isHistogram := root.Alternate() == 1
 		if isHistogram {
 			step, err := time.ParseDuration(query.Get("step"))
 			if err != nil {
@@ -128,7 +127,6 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				})
 			}
 			return []*Matrix{{
-				Metric: ropts.Labels,
 				Values: values,
 			}}, nil
 		}
