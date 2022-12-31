@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"time"
@@ -56,6 +57,26 @@ type Stream struct {
 	Values [][]string        `json:"values"`
 }
 
+func parseRange(query url.Values) (time.Time, time.Time, error) {
+	end := time.Now()
+	start := end.Add(-ReadRange)
+	if startNsec := query.Get("start"); startNsec != "" {
+		nsec, err := strconv.ParseUint(startNsec, 10, 64)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+		start = time.Unix(0, int64(nsec))
+	}
+	if endNsec := query.Get("end"); endNsec != "" {
+		nsec, err := strconv.ParseUint(endNsec, 10, 64)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+		end = time.Unix(0, int64(nsec))
+	}
+	return start, end, nil
+}
+
 // https://grafana.com/docs/loki/latest/api/#query-loki
 func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	opts.queryRange(rw, r, ps)
@@ -65,21 +86,9 @@ func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps htt
 func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	result, _ := func() (interface{}, error) {
 		query := r.URL.Query()
-		end := time.Now()
-		start := end.Add(-ReadRange)
-		if startNsec := query.Get("start"); startNsec != "" {
-			nsec, err := strconv.ParseUint(startNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			start = time.Unix(0, int64(nsec))
-		}
-		if endNsec := query.Get("end"); endNsec != "" {
-			nsec, err := strconv.ParseUint(endNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			end = time.Unix(0, int64(nsec))
+		start, end, err := parseRange(query)
+		if err != nil {
+			return nil, err
 		}
 		expr := query.Get("query")
 		lex := lexer.New([]rune(expr))
@@ -191,21 +200,9 @@ type LabelResponse struct {
 func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	labels, _ := func() ([]string, error) {
 		query := r.URL.Query()
-		end := time.Now()
-		start := end.Add(-ReadRange)
-		if startNsec := query.Get("start"); startNsec != "" {
-			nsec, err := strconv.ParseUint(startNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			start = time.Unix(0, int64(nsec))
-		}
-		if endNsec := query.Get("end"); endNsec != "" {
-			nsec, err := strconv.ParseUint(endNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			end = time.Unix(0, int64(nsec))
+		start, end, err := parseRange(query)
+		if err != nil {
+			return nil, err
 		}
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
 			Start: start,
@@ -239,21 +236,9 @@ func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, 
 	labelValues, _ := func() ([]string, error) {
 		label := ps.ByName("name")
 		query := r.URL.Query()
-		end := time.Now()
-		start := end.Add(-ReadRange)
-		if startNsec := query.Get("start"); startNsec != "" {
-			nsec, err := strconv.ParseUint(startNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			start = time.Unix(0, int64(nsec))
-		}
-		if endNsec := query.Get("end"); endNsec != "" {
-			nsec, err := strconv.ParseUint(endNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			end = time.Unix(0, int64(nsec))
+		start, end, err := parseRange(query)
+		if err != nil {
+			return nil, err
 		}
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
 			Start: start,
@@ -291,21 +276,9 @@ type SeriesResponse struct {
 func (opts *ServerOptions) series(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	kvs, _ := func() ([]map[string]string, error) {
 		query := r.URL.Query()
-		end := time.Now()
-		start := end.Add(-ReadRange)
-		if startNsec := query.Get("start"); startNsec != "" {
-			nsec, err := strconv.ParseUint(startNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			start = time.Unix(0, int64(nsec))
-		}
-		if endNsec := query.Get("end"); endNsec != "" {
-			nsec, err := strconv.ParseUint(endNsec, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			end = time.Unix(0, int64(nsec))
+		start, end, err := parseRange(query)
+		if err != nil {
+			return nil, err
 		}
 		es, err := opts.StorageReader.Read(&storage.ReadOptions{
 			Start: start,
