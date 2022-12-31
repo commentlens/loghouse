@@ -1,17 +1,33 @@
 package loki
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/commentlens/loghouse/api/loki/logql/lexer"
+	"github.com/commentlens/loghouse/api/loki/logql/parser"
 	"github.com/commentlens/loghouse/api/loki/logql/parser/bsr"
 	"github.com/commentlens/loghouse/api/loki/logql/parser/symbols"
 	"github.com/commentlens/loghouse/storage"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/tidwall/gjson"
 )
 
-func logqlRead(r storage.Reader, f func() *storage.ReadOptions, root bsr.BSR) ([]*storage.LogEntry, bool, error) {
+func logqlRead(r storage.Reader, f func() *storage.ReadOptions, query string) ([]*storage.LogEntry, bool, error) {
+	lex := lexer.New([]rune(query))
+	q, errs := parser.Parse(lex)
+	if len(errs) > 0 {
+		spew.Dump(errs)
+		return nil, false, fmt.Errorf("logql: parse query %q", query)
+	}
+	if q.IsAmbiguous() {
+		q.ReportAmbiguous()
+		return nil, false, fmt.Errorf("logql: ambiguous query %q", query)
+	}
+	root := q.GetRoot()
+
 	var isHistogram bool
 	var filters []func(e *storage.LogEntry) bool
 	ropts := f()

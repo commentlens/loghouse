@@ -1,6 +1,7 @@
 package loki
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,16 +10,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/commentlens/loghouse/api/loki/logql/lexer"
-	"github.com/commentlens/loghouse/api/loki/logql/parser"
 	"github.com/commentlens/loghouse/storage"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 const (
-	ReadLimit = 1000
-	ReadRange = time.Hour
+	ReadLimit    = 1000
+	ReadRange    = time.Hour
+	TailInterval = 15 * time.Second
 )
 
 type ServerOptions struct {
@@ -30,6 +31,7 @@ func NewServer(opts *ServerOptions) http.Handler {
 	m := httprouter.New()
 	m.GET("/loki/api/v1/query", opts.query)
 	m.GET("/loki/api/v1/query_range", opts.queryRange)
+	m.GET("/loki/api/v1/tail", opts.tail)
 	m.GET("/loki/api/v1/labels", opts.labels)
 	m.GET("/loki/api/v1/label/:name/values", opts.labelValues)
 	m.GET("/loki/api/v1/series", opts.series)
@@ -90,24 +92,13 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil {
 			return nil, err
 		}
-		expr := query.Get("query")
-		lex := lexer.New([]rune(expr))
-		q, errs := parser.Parse(lex)
-		if len(errs) > 0 {
-			spew.Dump(errs)
-			return nil, fmt.Errorf("logql: parse query %q", expr)
-		}
-		if q.IsAmbiguous() {
-			q.ReportAmbiguous()
-			return nil, fmt.Errorf("logql: ambiguous query %q", expr)
-		}
 		es, isHistogram, err := logqlRead(opts.StorageReader, func() *storage.ReadOptions {
 			return &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				Limit: ReadLimit,
 			}
-		}, q.GetRoot())
+		}, query.Get("query"))
 		if err != nil {
 			return nil, err
 		}
@@ -189,6 +180,91 @@ func reverse(s []*storage.LogEntry) {
 		j := len(s) - i - 1
 		s[i], s[j] = s[j], s[i]
 	}
+}
+
+type TailResponse struct {
+	Streams []*Stream `json:"streams"`
+}
+
+// https://grafana.com/docs/loki/latest/api/#stream-log-messages
+func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	conn, err := websocket.Accept(rw, r, nil)
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	defer conn.Close(websocket.StatusInternalError, "tail done")
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	go func() {
+		defer cancel()
+		for {
+			_, _, err := conn.Read(ctx)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	func() error {
+		query := r.URL.Query()
+
+		end := time.Now()
+		start := end.Add(-ReadRange)
+
+		ticker := time.NewTicker(TailInterval)
+		defer ticker.Stop()
+
+		for {
+			es, _, err := logqlRead(opts.StorageReader, func() *storage.ReadOptions {
+				return &storage.ReadOptions{
+					Start: start,
+					End:   end,
+					Limit: ReadLimit,
+				}
+			}, query.Get("query"))
+			if err != nil {
+				return err
+			}
+			m := make(map[string][]*storage.LogEntry)
+			for _, e := range es {
+				h, err := storage.HashLabels(e.Labels)
+				if err != nil {
+					return err
+				}
+				m[h] = append(m[h], e)
+			}
+			var streams []*Stream
+			for _, es := range m {
+				var values [][]string
+				for _, e := range es {
+					values = append(values, []string{
+						fmt.Sprint(e.Time.UnixNano()),
+						string(e.Data),
+					})
+				}
+				streams = append(streams, &Stream{
+					Stream: es[0].Labels,
+					Values: values,
+				})
+			}
+			err = wsjson.Write(ctx, conn, &TailResponse{
+				Streams: streams,
+			})
+			if err != nil {
+				return err
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case t := <-ticker.C:
+				start = end
+				end = t
+			}
+		}
+	}()
 }
 
 type LabelResponse struct {

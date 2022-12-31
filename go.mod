@@ -12,6 +12,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/sync v0.1.0
+	nhooyr.io/websocket v1.8.7
 )
 
 require (
