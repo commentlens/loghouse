@@ -225,7 +225,7 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 		query := r.URL.Query()
 
 		end := time.Now().Add(-TailDelay)
-		start := end.Add(-ReadRange)
+		start := end.Add(-TailInterval)
 
 		ticker := time.NewTicker(TailInterval)
 		defer ticker.Stop()
