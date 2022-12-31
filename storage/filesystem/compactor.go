@@ -186,7 +186,18 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 	return es, nil
 }
 
-func writeBlob(chunks []string) error {
+func writeBlob(w io.Writer, es []*storage.LogEntry) error {
+	enc := json.NewEncoder(w)
+	for _, e := range es {
+		err := enc.Encode(e)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeIndexAndBlob(chunks []string) error {
 	blobID := ulid.Make().String()
 	var bytesTotal uint64
 	for _, chunk := range chunks {
@@ -206,12 +217,9 @@ func writeBlob(chunks []string) error {
 			w = s2.NewWriter(w)
 		}
 		err = func(w io.Writer) error {
-			enc := json.NewEncoder(w)
-			for _, e := range es {
-				err := enc.Encode(e)
-				if err != nil {
-					return err
-				}
+			err := writeBlob(w, es)
+			if err != nil {
+				return err
 			}
 			if wc, ok := w.(io.WriteCloser); ok {
 				return wc.Close()
@@ -280,7 +288,7 @@ func compact() error {
 	if err != nil {
 		return err
 	}
-	err = writeBlob(chunks)
+	err = writeIndexAndBlob(chunks)
 	if err != nil {
 		return err
 	}

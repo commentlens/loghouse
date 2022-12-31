@@ -53,7 +53,7 @@ func (w *writer) write(e *storage.LogEntry) error {
 	}
 	defer f.Close()
 
-	return json.NewEncoder(f).Encode(e)
+	return writeBlob(f, []*storage.LogEntry{e})
 }
 
 func (w *writer) Write(es []*storage.LogEntry) error {
