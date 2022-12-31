@@ -42,9 +42,6 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var es []*storage.LogEntry
 	var done bool
 	for _, chunk := range r.Chunks {
-		if done {
-			continue
-		}
 		err := func() error {
 			f, err := os.Open(chunk)
 			if err != nil {
@@ -65,6 +62,9 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 		}()
 		if err != nil {
 			return nil, err
+		}
+		if done {
+			break
 		}
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })

@@ -86,9 +86,6 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 	var es []*storage.LogEntry
 	var done bool
 	for _, indexFile := range r.IndexFiles {
-		if done {
-			continue
-		}
 		indexList, err := func() ([]*compactIndex, error) {
 			f, err := os.Open(indexFile)
 			if err != nil {
@@ -136,6 +133,9 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 		}()
 		if err != nil {
 			return nil, err
+		}
+		if done {
+			break
 		}
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
