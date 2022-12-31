@@ -1,9 +1,7 @@
 package filesystem
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -82,50 +80,6 @@ func newBlobReader(indexFiles []string) storage.Reader {
 	return &blobReader{IndexFiles: indexFiles}
 }
 
-func readIndex(r io.Reader) ([]*compactIndex, error) {
-	var indexList []*compactIndex
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		var index compactIndex
-		err := json.Unmarshal([]byte(scanner.Text()), &index)
-		if err != nil {
-			return nil, err
-		}
-		indexList = append(indexList, &index)
-	}
-	err := scanner.Err()
-	if err != nil {
-		return nil, err
-	}
-	return indexList, nil
-}
-
-func readBlob(r io.Reader, opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	var es []*storage.LogEntry
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		var e storage.LogEntry
-		err := json.Unmarshal([]byte(scanner.Text()), &e)
-		if err != nil {
-			return nil, err
-		}
-		out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
-		if err != nil {
-			return nil, err
-		}
-		es = append(es, out...)
-		if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
-			es = es[:opts.Limit]
-			return es, nil
-		}
-	}
-	err := scanner.Err()
-	if err != nil {
-		return nil, err
-	}
-	return es, nil
-}
-
 func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var es []*storage.LogEntry
 	var done bool
@@ -186,13 +140,28 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 	return es, nil
 }
 
-func writeBlob(w io.Writer, es []*storage.LogEntry) error {
-	enc := json.NewEncoder(w)
-	for _, e := range es {
-		err := enc.Encode(e)
+func compact() error {
+	chunks, err := findFiles(WriteDir, CompactChunkFile)
+	if err != nil {
+		return err
+	}
+	err = writeIndexAndBlob(chunks)
+	if err != nil {
+		return err
+	}
+	for _, chunk := range chunks {
+		err := os.RemoveAll(chunk)
 		if err != nil {
 			return err
 		}
+	}
+	err = removeEmptyDir(WriteDir, CompactChunkIdlePeriod)
+	if err != nil {
+		return err
+	}
+	err = removeOldBlob(CompactDir, CompactBlobMaxAge)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -260,7 +229,7 @@ func writeIndexAndBlob(chunks []string) error {
 			}
 			defer f.Close()
 
-			return json.NewEncoder(f).Encode(&compactIndex{
+			return writeIndex(f, []*compactIndex{{
 				Labels:      es[0].Labels,
 				Start:       es[0].Time,
 				End:         es[len(es)-1].Time,
@@ -268,7 +237,7 @@ func writeIndexAndBlob(chunks []string) error {
 				BytesStart:  bytesTotal,
 				BytesEnd:    bytesTotal + uint64(buf.Len()),
 				Compression: compression,
-			})
+			}})
 		}()
 		if err != nil {
 			return err
@@ -279,32 +248,6 @@ func writeIndexAndBlob(chunks []string) error {
 		}
 		blobID = ulid.Make().String()
 		bytesTotal = 0
-	}
-	return nil
-}
-
-func compact() error {
-	chunks, err := findFiles(WriteDir, CompactChunkFile)
-	if err != nil {
-		return err
-	}
-	err = writeIndexAndBlob(chunks)
-	if err != nil {
-		return err
-	}
-	for _, chunk := range chunks {
-		err := os.RemoveAll(chunk)
-		if err != nil {
-			return err
-		}
-	}
-	err = removeEmptyDir(WriteDir, CompactChunkIdlePeriod)
-	if err != nil {
-		return err
-	}
-	err = removeOldBlob(CompactDir, CompactBlobMaxAge)
-	if err != nil {
-		return err
 	}
 	return nil
 }
