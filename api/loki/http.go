@@ -115,11 +115,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if query.Get("direction") == "backward" {
 			reverse(es)
 		}
-		streams, err := createStreams(es)
-		if err != nil {
-			return nil, err
-		}
-		return streams, nil
+		return createStreams(es)
 	}()
 	var data QueryResponseData
 	switch result := result.(type) {
