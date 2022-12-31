@@ -3,7 +3,7 @@ module github.com/commentlens/loghouse
 go 1.19
 
 require (
-	github.com/davecgh/go-spew v1.1.1
+	github.com/felixge/httpsnoop v1.0.3
 	github.com/goccmack/goutil v1.2.3
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/klauspost/compress v1.15.13
@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

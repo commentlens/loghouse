@@ -40,6 +40,10 @@ func NewServer(opts *ServerOptions) http.Handler {
 	return httpLogMiddleware(m)
 }
 
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
+
 type QueryResponse struct {
 	Status string            `json:"status"`
 	Data   QueryResponseData `json:"data"`
@@ -87,7 +91,7 @@ func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps htt
 
 // https://grafana.com/docs/loki/latest/api/#query-loki-over-a-range-of-time
 func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	result, _ := func() (interface{}, error) {
+	result, err := func() (interface{}, error) {
 		query := r.URL.Query()
 		start, end, err := parseRange(query)
 		if err != nil {
@@ -127,6 +131,11 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		data.Result = result
 	default:
 		rw.WriteHeader(http.StatusBadRequest)
+		if err != nil {
+			json.NewEncoder(rw).Encode(ErrorResponse{
+				Message: err.Error(),
+			})
+		}
 		return
 	}
 	json.NewEncoder(rw).Encode(QueryResponse{
@@ -417,5 +426,4 @@ func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httpr
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	rw.WriteHeader(http.StatusOK)
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/commentlens/loghouse/api/loki/logql/parser/bsr"
 	"github.com/commentlens/loghouse/api/loki/logql/parser/symbols"
 	"github.com/commentlens/loghouse/storage"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/tidwall/gjson"
 )
 
@@ -19,11 +18,9 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, query string) ([
 	lex := lexer.New([]rune(query))
 	q, errs := parser.Parse(lex)
 	if len(errs) > 0 {
-		spew.Dump(errs)
-		return nil, false, fmt.Errorf("logql: parse query %q", query)
+		return nil, false, fmt.Errorf("logql: %s", errs[0].String())
 	}
 	if q.IsAmbiguous() {
-		q.ReportAmbiguous()
 		return nil, false, fmt.Errorf("logql: ambiguous query %q", query)
 	}
 	root := q.GetRoot()
