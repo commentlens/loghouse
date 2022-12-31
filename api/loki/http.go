@@ -20,6 +20,7 @@ const (
 	ReadLimit    = 1000
 	ReadRange    = time.Hour
 	TailInterval = 15 * time.Second
+	TailDelay    = 5 * time.Second
 )
 
 type ServerOptions struct {
@@ -107,53 +108,16 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			if err != nil {
 				return nil, err
 			}
-			var values [][]interface{}
-			i := 0
-			for t := start; t.Before(end); t = t.Add(step) {
-				var count uint64
-				for ; i < len(es); i++ {
-					if es[i].Time.Before(t) {
-						continue
-					}
-					if es[i].Time.Before(t.Add(step)) {
-						count++
-						continue
-					}
-					break
-				}
-				values = append(values, []interface{}{
-					t.Unix(),
-					fmt.Sprint(count),
-				})
-			}
 			return []*Matrix{{
-				Values: values,
+				Values: createHistogram(es, start, end, step),
 			}}, nil
 		}
 		if query.Get("direction") == "backward" {
 			reverse(es)
 		}
-		m := make(map[string][]*storage.LogEntry)
-		for _, e := range es {
-			h, err := storage.HashLabels(e.Labels)
-			if err != nil {
-				return nil, err
-			}
-			m[h] = append(m[h], e)
-		}
-		var streams []*Stream
-		for _, es := range m {
-			var values [][]string
-			for _, e := range es {
-				values = append(values, []string{
-					fmt.Sprint(e.Time.UnixNano()),
-					string(e.Data),
-				})
-			}
-			streams = append(streams, &Stream{
-				Stream: es[0].Labels,
-				Values: values,
-			})
+		streams, err := createStreams(es)
+		if err != nil {
+			return nil, err
 		}
 		return streams, nil
 	}()
@@ -180,6 +144,55 @@ func reverse(s []*storage.LogEntry) {
 		j := len(s) - i - 1
 		s[i], s[j] = s[j], s[i]
 	}
+}
+
+func createHistogram(es []*storage.LogEntry, start, end time.Time, step time.Duration) [][]interface{} {
+	var values [][]interface{}
+	i := 0
+	for t := start; t.Before(end); t = t.Add(step) {
+		var count uint64
+		for ; i < len(es); i++ {
+			if es[i].Time.Before(t) {
+				continue
+			}
+			if es[i].Time.Before(t.Add(step)) {
+				count++
+				continue
+			}
+			break
+		}
+		values = append(values, []interface{}{
+			t.Unix(),
+			fmt.Sprint(count),
+		})
+	}
+	return values
+}
+
+func createStreams(es []*storage.LogEntry) ([]*Stream, error) {
+	m := make(map[string][]*storage.LogEntry)
+	for _, e := range es {
+		h, err := storage.HashLabels(e.Labels)
+		if err != nil {
+			return nil, err
+		}
+		m[h] = append(m[h], e)
+	}
+	var streams []*Stream
+	for _, es := range m {
+		var values [][]string
+		for _, e := range es {
+			values = append(values, []string{
+				fmt.Sprint(e.Time.UnixNano()),
+				string(e.Data),
+			})
+		}
+		streams = append(streams, &Stream{
+			Stream: es[0].Labels,
+			Values: values,
+		})
+	}
+	return streams, nil
 }
 
 type TailResponse struct {
@@ -211,7 +224,7 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 	func() error {
 		query := r.URL.Query()
 
-		end := time.Now()
+		end := time.Now().Add(-TailDelay)
 		start := end.Add(-ReadRange)
 
 		ticker := time.NewTicker(TailInterval)
@@ -228,27 +241,9 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 			if err != nil {
 				return err
 			}
-			m := make(map[string][]*storage.LogEntry)
-			for _, e := range es {
-				h, err := storage.HashLabels(e.Labels)
-				if err != nil {
-					return err
-				}
-				m[h] = append(m[h], e)
-			}
-			var streams []*Stream
-			for _, es := range m {
-				var values [][]string
-				for _, e := range es {
-					values = append(values, []string{
-						fmt.Sprint(e.Time.UnixNano()),
-						string(e.Data),
-					})
-				}
-				streams = append(streams, &Stream{
-					Stream: es[0].Labels,
-					Values: values,
-				})
+			streams, err := createStreams(es)
+			if err != nil {
+				return err
 			}
 			err = wsjson.Write(ctx, conn, &TailResponse{
 				Streams: streams,
@@ -261,7 +256,7 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 				return ctx.Err()
 			case t := <-ticker.C:
 				start = end
-				end = t
+				end = t.Add(-TailDelay)
 			}
 		}
 	}()
