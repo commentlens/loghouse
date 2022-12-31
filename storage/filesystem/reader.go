@@ -1,8 +1,6 @@
 package filesystem
 
 import (
-	"bufio"
-	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -42,35 +40,33 @@ type reader struct {
 
 func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var es []*storage.LogEntry
+	var done bool
 	for _, chunk := range r.Chunks {
+		if done {
+			continue
+		}
 		err := func() error {
 			f, err := os.Open(chunk)
 			if err != nil {
 				return err
 			}
 			defer f.Close()
-			scanner := bufio.NewScanner(f)
-			for scanner.Scan() {
-				var e storage.LogEntry
-				err := json.Unmarshal([]byte(scanner.Text()), &e)
-				if err != nil {
-					return err
-				}
-				out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
-				if err != nil {
-					return err
-				}
-				es = append(es, out...)
+
+			esBlob, err := readBlob(f, opts)
+			if err != nil {
+				return err
 			}
-			return scanner.Err()
+			es = append(es, esBlob...)
+			if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
+				es = es[:opts.Limit]
+				done = true
+			}
+			return nil
 		}()
 		if err != nil {
 			return nil, err
 		}
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
-	if opts.Limit > 0 && uint64(len(es)) > opts.Limit {
-		es = es[:opts.Limit]
-	}
 	return es, nil
 }

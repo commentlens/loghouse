@@ -82,31 +82,70 @@ func newBlobReader(indexFiles []string) storage.Reader {
 	return &blobReader{IndexFiles: indexFiles}
 }
 
-func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	var es []*storage.LogEntry
-	for _, indexFile := range r.IndexFiles {
-		var indexList []*compactIndex
-		err := func() error {
-			f, err := os.Open(indexFile)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			scanner := bufio.NewScanner(f)
-			for scanner.Scan() {
-				var index compactIndex
-				err := json.Unmarshal([]byte(scanner.Text()), &index)
-				if err != nil {
-					return err
-				}
-				indexList = append(indexList, &index)
-			}
-			return scanner.Err()
-		}()
+func readIndex(r io.Reader) ([]*compactIndex, error) {
+	var indexList []*compactIndex
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		var index compactIndex
+		err := json.Unmarshal([]byte(scanner.Text()), &index)
 		if err != nil {
 			return nil, err
 		}
-		indexList, err = filterIndex(indexList, opts)
+		indexList = append(indexList, &index)
+	}
+	err := scanner.Err()
+	if err != nil {
+		return nil, err
+	}
+	return indexList, nil
+}
+
+func readBlob(r io.Reader, opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
+	var es []*storage.LogEntry
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		var e storage.LogEntry
+		err := json.Unmarshal([]byte(scanner.Text()), &e)
+		if err != nil {
+			return nil, err
+		}
+		out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
+		if err != nil {
+			return nil, err
+		}
+		es = append(es, out...)
+		if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
+			es = es[:opts.Limit]
+			return es, nil
+		}
+	}
+	err := scanner.Err()
+	if err != nil {
+		return nil, err
+	}
+	return es, nil
+}
+
+func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
+	var es []*storage.LogEntry
+	var done bool
+	for _, indexFile := range r.IndexFiles {
+		if done {
+			continue
+		}
+		indexList, err := func() ([]*compactIndex, error) {
+			f, err := os.Open(indexFile)
+			if err != nil {
+				return nil, err
+			}
+			defer f.Close()
+
+			indexList, err := readIndex(f)
+			if err != nil {
+				return nil, err
+			}
+			return filterIndex(indexList, opts)
+		}()
 		if err != nil {
 			return nil, err
 		}
@@ -126,22 +165,15 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 				case "s2":
 					r = s2.NewReader(r)
 				}
-				scanner := bufio.NewScanner(r)
-				for scanner.Scan() {
-					var e storage.LogEntry
-					err := json.Unmarshal([]byte(scanner.Text()), &e)
-					if err != nil {
-						return err
-					}
-					out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
-					if err != nil {
-						return err
-					}
-					es = append(es, out...)
-				}
-				err = scanner.Err()
+				esBlob, err := readBlob(r, opts)
 				if err != nil {
 					return err
+				}
+				es = append(es, esBlob...)
+				if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
+					es = es[:opts.Limit]
+					done = true
+					return nil
 				}
 			}
 			return nil
@@ -151,9 +183,6 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 		}
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
-	if opts.Limit > 0 && uint64(len(es)) > opts.Limit {
-		es = es[:opts.Limit]
-	}
 	return es, nil
 }
 

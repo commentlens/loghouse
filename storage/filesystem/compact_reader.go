@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"sort"
 	"sync"
 
@@ -60,36 +61,54 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
 		defer close(chOut)
 		defer wg.Wait()
 		defer close(chIn)
+
 		for _, chunk := range chunks {
-			chIn <- struct {
+			select {
+			case <-ctx.Done():
+				return
+			case chIn <- struct {
 				Type string
 				File string
 			}{
 				Type: "chunk",
 				File: chunk,
+			}:
 			}
 		}
 		for _, indexFile := range indexFiles {
-			chIn <- struct {
+			select {
+			case <-ctx.Done():
+				return
+			case chIn <- struct {
 				Type string
 				File string
 			}{
 				Type: "index",
 				File: indexFile,
+			}:
 			}
 		}
 	}()
 	var out []*storage.LogEntry
+	var done bool
 	for es := range chOut {
+		if done {
+			continue
+		}
 		out = append(out, es...)
+		if opts.Limit > 0 && uint64(len(out)) >= opts.Limit {
+			out = out[:opts.Limit]
+			done = true
+			cancel()
+		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Time.Before(out[j].Time) })
-	if opts.Limit > 0 && uint64(len(out)) > opts.Limit {
-		out = out[:opts.Limit]
-	}
 	return out, nil
 }
