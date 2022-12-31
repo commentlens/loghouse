@@ -217,11 +217,15 @@ func TestCompactReadWriter(t *testing.T) {
 	require.NoError(t, err)
 	require.ElementsMatch(t, es, esRead)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*CompactBackgroundInterval)
-	defer cancel()
-
+	err = markChunkCompactible()
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 	err = w.BackgroundCompact(ctx)
-	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.ErrorIs(t, err, context.Canceled)
+
+	err = os.RemoveAll(WriteDir)
+	require.NoError(t, err)
 
 	esRead, err = r.Read(&storage.ReadOptions{
 		Labels: map[string]string{

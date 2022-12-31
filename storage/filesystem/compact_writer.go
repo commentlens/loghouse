@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	CompactBackgroundInterval = 10 * time.Second
+	CompactBackgroundInterval = time.Minute
 )
 
 func NewCompactWriter() interface {
@@ -30,27 +30,27 @@ func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
 	defer ticker.Stop()
 
 	for {
+		err := w.c.Compact()
+		if err != nil {
+			return err
+		}
+		err = func() error {
+			w.mu.Lock()
+			defer w.mu.Unlock()
+
+			return w.c.SwapChunk()
+		}()
+		if err != nil {
+			return err
+		}
+		err = w.c.Compact()
+		if err != nil {
+			return err
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			err := w.c.Compact()
-			if err != nil {
-				return err
-			}
-			err = func() error {
-				w.mu.Lock()
-				defer w.mu.Unlock()
-
-				return w.c.SwapChunk()
-			}()
-			if err != nil {
-				return err
-			}
-			err = w.c.Compact()
-			if err != nil {
-				return err
-			}
 		}
 	}
 }
