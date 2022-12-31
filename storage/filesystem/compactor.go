@@ -19,7 +19,9 @@ import (
 const (
 	CompactDir             = "data/compact"
 	CompactChunkFile       = "chunk.jsonl.tmp"
-	CompactChunkIdlePeriod = 6 * time.Hour
+	CompactChunkIdlePeriod = 2 * time.Hour
+	CompactChunkMaxAge     = 6 * time.Hour
+	CompactChunkMaxCount   = 1000
 	CompactChunkMaxSize    = 1024 * 1024 * 100
 	CompactIndexFile       = "index"
 	CompactBlobFile        = "blob"
@@ -155,7 +157,7 @@ func compact() error {
 			return err
 		}
 	}
-	err = removeEmptyDir(WriteDir, CompactChunkIdlePeriod)
+	err = removeEmptyDir(WriteDir, CompactChunkMaxAge)
 	if err != nil {
 		return err
 	}
@@ -252,18 +254,22 @@ func writeIndexAndBlob(chunks []string) error {
 	return nil
 }
 
-func chunkCompactible(chunk string) (bool, error) {
-	finfo, err := os.Stat(chunk)
+func chunkCompactible(chunk string) (uint8, error) {
+	fi, err := os.Stat(chunk)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
-	if time.Since(finfo.ModTime()) >= CompactChunkIdlePeriod {
-		return true, nil
+	if fi.Size() >= CompactChunkMaxSize {
+		return 2, nil
 	}
-	if finfo.Size() >= CompactChunkMaxSize {
-		return true, nil
+	mtime := fi.ModTime()
+	if time.Since(mtime) >= CompactChunkMaxAge {
+		return 2, nil
 	}
-	return false, nil
+	if time.Since(mtime) >= CompactChunkIdlePeriod {
+		return 1, nil
+	}
+	return 0, nil
 }
 
 func swapChunk() error {
@@ -271,17 +277,32 @@ func swapChunk() error {
 	if err != nil {
 		return err
 	}
+	var nowChunks, laterChunks []string
 	for _, chunk := range chunks {
-		ok, err := chunkCompactible(chunk)
+		status, err := chunkCompactible(chunk)
 		if err != nil {
 			return err
 		}
-		if !ok {
-			continue
+		switch status {
+		case 2:
+			nowChunks = append(nowChunks, chunk)
+		case 1:
+			laterChunks = append(laterChunks, chunk)
 		}
-		err = os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactChunkFile))
-		if err != nil {
-			return err
+	}
+	var swappable [][]string
+	if len(nowChunks) > 0 {
+		swappable = append(swappable, nowChunks)
+	}
+	if len(laterChunks) >= CompactChunkMaxCount {
+		swappable = append(swappable, laterChunks)
+	}
+	for _, chunks := range swappable {
+		for _, chunk := range chunks {
+			err = os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactChunkFile))
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

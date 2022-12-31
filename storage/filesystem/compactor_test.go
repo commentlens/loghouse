@@ -36,7 +36,7 @@ func markChunkCompactible() error {
 		if err != nil {
 			return nil
 		}
-		oldTime := time.Now().Add(-2 * CompactChunkIdlePeriod)
+		oldTime := time.Now().Add(-2 * CompactChunkMaxAge)
 		return os.Chtimes(path, oldTime, oldTime)
 	})
 }
