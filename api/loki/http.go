@@ -97,12 +97,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil {
 			return nil, err
 		}
-		now := time.Now()
-		_, isHistogram, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
-			Start: now,
-			End:   now,
-			Limit: 1,
-		}, query.Get("query"))
+		isHistogram, err := logqlIsHistogram(query.Get("query"))
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +108,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			var values [][]interface{}
 			for t := start; t.Before(end); t = t.Add(step) {
-				es, _, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+				es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
 					Start: t,
 					End:   t.Add(step),
 					Limit: 0,
@@ -130,7 +125,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				Values: values,
 			}}, nil
 		}
-		es, _, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+		es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
 			Start: start,
 			End:   end,
 			Limit: ReadLimit,
@@ -235,7 +230,7 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 		defer ticker.Stop()
 
 		for {
-			es, _, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+			es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				Limit: ReadLimit,

@@ -14,23 +14,14 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*storage.LogEntry, bool, error) {
-	lex := lexer.New([]rune(query))
-	q, errs := parser.Parse(lex)
-	if len(errs) > 0 {
-		return nil, false, fmt.Errorf("logql: %s", errs[0].String())
+func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*storage.LogEntry, error) {
+	root, err := logqlParse(query)
+	if err != nil {
+		return nil, err
 	}
-	if q.IsAmbiguous() {
-		return nil, false, fmt.Errorf("logql: ambiguous query %q", query)
-	}
-	root := q.GetRoot()
-
-	var isHistogram bool
 	var filters []func(e *storage.LogEntry) bool
 	logqlWalk(root, func(node bsr.BSR) {
 		switch node.Label.Slot().NT {
-		case symbols.NT_MetricQuery:
-			isHistogram = true
 		case symbols.NT_LogSelectorMember:
 			key := node.GetNTChildI(0).GetTChildI(0).LiteralString()
 			op := node.GetNTChildI(1).GetTChildI(0).LiteralString()
@@ -231,11 +222,19 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		}
 		return match
 	}
-	es, err := r.Read(ropts)
-	if err != nil {
-		return nil, false, err
+	return r.Read(ropts)
+}
+
+func logqlParse(query string) (bsr.BSR, error) {
+	lex := lexer.New([]rune(query))
+	q, errs := parser.Parse(lex)
+	if len(errs) > 0 {
+		return bsr.BSR{}, fmt.Errorf("logql: %s", errs[0].String())
 	}
-	return es, isHistogram, nil
+	if q.IsAmbiguous() {
+		return bsr.BSR{}, fmt.Errorf("logql: ambiguous query %q", query)
+	}
+	return q.GetRoot(), nil
 }
 
 func logqlWalk(node bsr.BSR, f func(bsr.BSR)) {
@@ -245,4 +244,19 @@ func logqlWalk(node bsr.BSR, f func(bsr.BSR)) {
 			logqlWalk(nt, f)
 		}
 	}
+}
+
+func logqlIsHistogram(query string) (bool, error) {
+	root, err := logqlParse(query)
+	if err != nil {
+		return false, err
+	}
+	var isHistogram bool
+	logqlWalk(root, func(node bsr.BSR) {
+		switch node.Label.Slot().NT {
+		case symbols.NT_MetricQuery:
+			isHistogram = true
+		}
+	})
+	return isHistogram, nil
 }
