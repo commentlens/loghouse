@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFilterLabelAll(t *testing.T) {
+func TestFilter(t *testing.T) {
 	es := []*LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",
-				"role": "test2",
+				"role": "test1",
 			},
 			Time: time.Now().UTC(),
 			Data: []byte(`{"test":1}`),
@@ -22,169 +22,80 @@ func TestFilterLabelAll(t *testing.T) {
 				"app":  "test",
 				"role": "test2",
 			},
-			Time: time.Now().UTC(),
+			Time: time.Now().UTC().Add(time.Hour),
 			Data: []byte(`{"test":2}`),
 		},
 	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app":  "test",
-			"role": "test2",
-		},
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 2)
-}
-
-func TestFilterLabelSubset(t *testing.T) {
-	es := []*LogEntry{
+	for _, test := range []struct {
+		name        string
+		readOptions *ReadOptions
+		want        []*LogEntry
+	}{
 		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
+			name: "match labels",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{
+					"app":  "test",
+					"role": "test2",
+				},
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
+			want: []*LogEntry{es[1]},
 		},
 		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
+			name: "match some labels",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{
+					"app": "test",
+				},
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
+			want: es,
 		},
+		{
+			name: "mismatch labels",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{
+					"app": "test1",
+				},
+			},
+		},
+		{
+			name: "mismatch some labels",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{
+					"app":  "test",
+					"role": "test3",
+				},
+			},
+		},
+		{
+			name: "no label",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{},
+			},
+			want: es,
+		},
+		{
+			name: "match time",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{},
+				Start:  time.Now().Add(-time.Hour),
+				End:    time.Now(),
+			},
+			want: []*LogEntry{es[0]},
+		},
+		{
+			name: "mismatch time",
+			readOptions: &ReadOptions{
+				Labels: map[string]string{},
+				Start:  time.Now().Add(time.Hour),
+				End:    time.Now().Add(-time.Hour),
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := Filter(es, test.readOptions)
+			require.NoError(t, err)
+			require.Equal(t, test.want, got)
+		})
 	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app": "test",
-		},
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 2)
-}
-
-func TestFilterLabelSubsetMismatch(t *testing.T) {
-	es := []*LogEntry{
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
-		},
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
-		},
-	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app":  "test",
-			"role": "test3",
-		},
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 0)
-}
-
-func TestFilterLabelMismatch(t *testing.T) {
-	es := []*LogEntry{
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
-		},
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
-		},
-	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app": "test1",
-		},
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 0)
-}
-
-func TestFilterTime(t *testing.T) {
-	es := []*LogEntry{
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
-		},
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
-		},
-	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app":  "test",
-			"role": "test2",
-		},
-		Start: time.Now().Add(-time.Hour),
-		End:   time.Now().Add(time.Hour),
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 2)
-}
-
-func TestFilterTimeMismatch(t *testing.T) {
-	es := []*LogEntry{
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
-		},
-		{
-			Labels: map[string]string{
-				"app":  "test",
-				"role": "test2",
-			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
-		},
-	}
-
-	out, err := Filter(es, &ReadOptions{
-		Labels: map[string]string{
-			"app":  "test",
-			"role": "test2",
-		},
-		Start: time.Now().Add(time.Hour),
-		End:   time.Now().Add(-time.Hour),
-	})
-	require.NoError(t, err)
-	require.Len(t, out, 0)
 }
