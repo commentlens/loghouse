@@ -433,7 +433,7 @@ func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httpr
 					Data:   json.RawMessage(v[1]),
 				})
 			}
-			err = opts.StorageWriter.Write(es)
+			err := opts.StorageWriter.Write(es)
 			if err != nil {
 				return err
 			}
