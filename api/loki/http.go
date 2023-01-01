@@ -119,11 +119,11 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				}
 			}
 			for storageStart.Before(end) {
-				storageEnd := storageStart.Add(24 * time.Hour)
+				storageEnd := storageStart.Add(7 * 24 * time.Hour)
 				es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
 					Start: storageStart,
 					End:   storageEnd,
-					Limit: ReadLimit,
+					Limit: 100_000,
 				}, query.Get("query"))
 				if err != nil {
 					return nil, err
