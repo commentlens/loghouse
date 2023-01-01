@@ -299,7 +299,7 @@ func swapChunk() error {
 	}
 	for _, chunks := range swappable {
 		for _, chunk := range chunks {
-			err = os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactChunkFile))
+			err := os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactChunkFile))
 			if err != nil {
 				return err
 			}
