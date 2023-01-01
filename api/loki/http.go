@@ -97,12 +97,11 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil {
 			return nil, err
 		}
-		es, isHistogram, err := logqlRead(opts.StorageReader, func() *storage.ReadOptions {
-			return &storage.ReadOptions{
-				Start: start,
-				End:   end,
-				Limit: ReadLimit,
-			}
+		now := time.Now()
+		_, isHistogram, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+			Start: now,
+			End:   now,
+			Limit: 1,
 		}, query.Get("query"))
 		if err != nil {
 			return nil, err
@@ -112,9 +111,32 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			if err != nil {
 				return nil, err
 			}
+			var values [][]interface{}
+			for t := start; t.Before(end); t = t.Add(step) {
+				es, _, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+					Start: t,
+					End:   t.Add(step),
+					Limit: 0,
+				}, query.Get("query"))
+				if err != nil {
+					return nil, err
+				}
+				values = append(values, []interface{}{
+					t.Unix(),
+					fmt.Sprint(len(es)),
+				})
+			}
 			return []*Matrix{{
-				Values: createHistogram(es, start, end, step),
+				Values: values,
 			}}, nil
+		}
+		es, _, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+			Start: start,
+			End:   end,
+			Limit: ReadLimit,
+		}, query.Get("query"))
+		if err != nil {
+			return nil, err
 		}
 		if query.Get("direction") == "backward" {
 			reverse(es)
@@ -149,29 +171,6 @@ func reverse(s []*storage.LogEntry) {
 		j := len(s) - i - 1
 		s[i], s[j] = s[j], s[i]
 	}
-}
-
-func createHistogram(es []*storage.LogEntry, start, end time.Time, step time.Duration) [][]interface{} {
-	var values [][]interface{}
-	i := 0
-	for t := start; t.Before(end); t = t.Add(step) {
-		var count uint64
-		for ; i < len(es); i++ {
-			if es[i].Time.Before(t) {
-				continue
-			}
-			if es[i].Time.Before(t.Add(step)) {
-				count++
-				continue
-			}
-			break
-		}
-		values = append(values, []interface{}{
-			t.Unix(),
-			fmt.Sprint(count),
-		})
-	}
-	return values
 }
 
 func createStreams(es []*storage.LogEntry) ([]*Stream, error) {
@@ -236,12 +235,10 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 		defer ticker.Stop()
 
 		for {
-			es, _, err := logqlRead(opts.StorageReader, func() *storage.ReadOptions {
-				return &storage.ReadOptions{
-					Start: start,
-					End:   end,
-					Limit: ReadLimit,
-				}
+			es, _, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+				Start: start,
+				End:   end,
+				Limit: ReadLimit,
 			}, query.Get("query"))
 			if err != nil {
 				return err

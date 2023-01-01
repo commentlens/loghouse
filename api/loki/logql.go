@@ -14,7 +14,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func logqlRead(r storage.Reader, f func() *storage.ReadOptions, query string) ([]*storage.LogEntry, bool, error) {
+func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*storage.LogEntry, bool, error) {
 	lex := lexer.New([]rune(query))
 	q, errs := parser.Parse(lex)
 	if len(errs) > 0 {
@@ -27,12 +27,10 @@ func logqlRead(r storage.Reader, f func() *storage.ReadOptions, query string) ([
 
 	var isHistogram bool
 	var filters []func(e *storage.LogEntry) bool
-	ropts := f()
 	logqlWalk(root, func(node bsr.BSR) {
 		switch node.Label.Slot().NT {
 		case symbols.NT_MetricQuery:
 			isHistogram = true
-			ropts.Limit = 0
 		case symbols.NT_LogSelectorMember:
 			key := node.GetNTChildI(0).GetTChildI(0).LiteralString()
 			op := node.GetNTChildI(1).GetTChildI(0).LiteralString()
