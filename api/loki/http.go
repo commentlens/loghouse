@@ -107,19 +107,45 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				return nil, err
 			}
 			var values [][]interface{}
-			for t := start; t.Before(end); t = t.Add(step) {
+			histoStart := start
+			storageStart := histoStart
+			var count uint64
+			flushCount := func() {
+				if count > 0 {
+					values = append(values, []interface{}{
+						histoStart.Unix(),
+						fmt.Sprint(count),
+					})
+				}
+			}
+			for storageStart.Before(end) {
+				storageEnd := storageStart.Add(24 * time.Hour)
 				es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
-					Start: t,
-					End:   t.Add(step),
-					Limit: 0,
+					Start: storageStart,
+					End:   storageEnd,
+					Limit: ReadLimit,
 				}, query.Get("query"))
 				if err != nil {
 					return nil, err
 				}
-				values = append(values, []interface{}{
-					t.Unix(),
-					fmt.Sprint(len(es)),
-				})
+				if len(es) == 0 {
+					storageStart = storageEnd
+					continue
+				}
+				for _, e := range es {
+				START_COUNT:
+					storageStart = e.Time.Add(1)
+
+					if e.Time.Before(histoStart.Add(step)) {
+						count++
+					} else {
+						flushCount()
+						histoStart = histoStart.Add(step)
+						count = 0
+						goto START_COUNT
+					}
+				}
+				flushCount()
 			}
 			return []*Matrix{{
 				Values: values,
