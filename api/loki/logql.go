@@ -238,7 +238,7 @@ func logqlParse(query string) (bsr.BSR, error) {
 func logqlUnquote(s string) (string, error) {
 	raw, err := strconv.Unquote(s)
 	if err != nil {
-		return "", fmt.Errorf("logql: %w (%s)", err, s)
+		return "", fmt.Errorf("logql: %w %s", err, s)
 	}
 	return raw, nil
 }
