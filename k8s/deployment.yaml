@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loghouse
+spec:
+  replicas: 1
+  serviceName: loghousecluster
+  selector:
+    matchLabels:
+      app: loghouse
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: loghouse
+    spec:
+      tolerations:
+        - key: 'logging'
+          operator: 'Equal'
+          value: 'true'
+          effect: 'NoSchedule'
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: logging
+                    operator: In
+                    values:
+                      - 'true'
+      restartPolicy: Always
+      containers:
+        - name: loghouse
+          image: gcr.io/fathom-production/loghouse:master
+          volumeMounts:
+            - name: loghouse-data
+              mountPath: /data
+              subPath: data
+          ports:
+            - containerPort: 3100
+              name: http
+  volumeClaimTemplates:
+    - metadata:
+        name: loghouse-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        resources:
+          requests:
+            storage: 100Gi
