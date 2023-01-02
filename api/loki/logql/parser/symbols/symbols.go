@@ -19,9 +19,8 @@ func (T) isSymbol() {}
 // NT is the type of non-terminals symbols
 type NT int
 const( 
-	NT_LabelFilter NT = iota
-	NT_LabelFilterOp 
-	NT_LabelFilterValue 
+	NT_DataFilter NT = iota
+	NT_DataFilterOp 
 	NT_LabelKey 
 	NT_LineFilter 
 	NT_LineFilterOp 
@@ -32,7 +31,6 @@ const(
 	NT_LogSelectorMembersMaybe 
 	NT_LogSelectorOp 
 	NT_MetricQuery 
-	NT_NestedLabelKey 
 	NT_Pipeline 
 	NT_Pipelines 
 	NT_PipelinesMaybe 
@@ -47,26 +45,24 @@ const(
 	T_2  // ( 
 	T_3  // ) 
 	T_4  // , 
-	T_5  // . 
-	T_6  // < 
-	T_7  // <= 
-	T_8  // = 
-	T_9  // =~ 
-	T_10  // > 
-	T_11  // >= 
-	T_12  // by 
-	T_13  // count_over_time 
-	T_14  // duration 
-	T_15  // float 
-	T_16  // level 
-	T_17  // string 
-	T_18  // sum 
-	T_19  // var_name 
-	T_20  // { 
-	T_21  // | 
-	T_22  // |= 
-	T_23  // |~ 
-	T_24  // } 
+	T_5  // < 
+	T_6  // <= 
+	T_7  // = 
+	T_8  // =~ 
+	T_9  // > 
+	T_10  // >= 
+	T_11  // by 
+	T_12  // count_over_time 
+	T_13  // duration 
+	T_14  // level 
+	T_15  // string 
+	T_16  // sum 
+	T_17  // var_name 
+	T_18  // { 
+	T_19  // | 
+	T_20  // |= 
+	T_21  // |~ 
+	T_22  // } 
 )
 
 type Symbols []Symbol
@@ -134,9 +130,8 @@ func ToNT(sym string) NT {
 }
 
 var ntToString = []string { 
-	"LabelFilter", /* NT_LabelFilter */
-	"LabelFilterOp", /* NT_LabelFilterOp */
-	"LabelFilterValue", /* NT_LabelFilterValue */
+	"DataFilter", /* NT_DataFilter */
+	"DataFilterOp", /* NT_DataFilterOp */
 	"LabelKey", /* NT_LabelKey */
 	"LineFilter", /* NT_LineFilter */
 	"LineFilterOp", /* NT_LineFilterOp */
@@ -147,7 +142,6 @@ var ntToString = []string {
 	"LogSelectorMembersMaybe", /* NT_LogSelectorMembersMaybe */
 	"LogSelectorOp", /* NT_LogSelectorOp */
 	"MetricQuery", /* NT_MetricQuery */
-	"NestedLabelKey", /* NT_NestedLabelKey */
 	"Pipeline", /* NT_Pipeline */
 	"Pipelines", /* NT_Pipelines */
 	"PipelinesMaybe", /* NT_PipelinesMaybe */
@@ -160,32 +154,29 @@ var tToString = []string {
 	"(", /* T_2 */
 	")", /* T_3 */
 	",", /* T_4 */
-	".", /* T_5 */
-	"<", /* T_6 */
-	"<=", /* T_7 */
-	"=", /* T_8 */
-	"=~", /* T_9 */
-	">", /* T_10 */
-	">=", /* T_11 */
-	"by", /* T_12 */
-	"count_over_time", /* T_13 */
-	"duration", /* T_14 */
-	"float", /* T_15 */
-	"level", /* T_16 */
-	"string", /* T_17 */
-	"sum", /* T_18 */
-	"var_name", /* T_19 */
-	"{", /* T_20 */
-	"|", /* T_21 */
-	"|=", /* T_22 */
-	"|~", /* T_23 */
-	"}", /* T_24 */ 
+	"<", /* T_5 */
+	"<=", /* T_6 */
+	"=", /* T_7 */
+	"=~", /* T_8 */
+	">", /* T_9 */
+	">=", /* T_10 */
+	"by", /* T_11 */
+	"count_over_time", /* T_12 */
+	"duration", /* T_13 */
+	"level", /* T_14 */
+	"string", /* T_15 */
+	"sum", /* T_16 */
+	"var_name", /* T_17 */
+	"{", /* T_18 */
+	"|", /* T_19 */
+	"|=", /* T_20 */
+	"|~", /* T_21 */
+	"}", /* T_22 */ 
 }
 
 var stringNT = map[string]NT{ 
-	"LabelFilter":NT_LabelFilter,
-	"LabelFilterOp":NT_LabelFilterOp,
-	"LabelFilterValue":NT_LabelFilterValue,
+	"DataFilter":NT_DataFilter,
+	"DataFilterOp":NT_DataFilterOp,
 	"LabelKey":NT_LabelKey,
 	"LineFilter":NT_LineFilter,
 	"LineFilterOp":NT_LineFilterOp,
@@ -196,7 +187,6 @@ var stringNT = map[string]NT{
 	"LogSelectorMembersMaybe":NT_LogSelectorMembersMaybe,
 	"LogSelectorOp":NT_LogSelectorOp,
 	"MetricQuery":NT_MetricQuery,
-	"NestedLabelKey":NT_NestedLabelKey,
 	"Pipeline":NT_Pipeline,
 	"Pipelines":NT_Pipelines,
 	"PipelinesMaybe":NT_PipelinesMaybe,

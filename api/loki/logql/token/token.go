@@ -140,26 +140,24 @@ const(
     T_2  // ( 
     T_3  // ) 
     T_4  // , 
-    T_5  // . 
-    T_6  // < 
-    T_7  // <= 
-    T_8  // = 
-    T_9  // =~ 
-    T_10  // > 
-    T_11  // >= 
-    T_12  // by 
-    T_13  // count_over_time 
-    T_14  // duration 
-    T_15  // float 
-    T_16  // level 
-    T_17  // string 
-    T_18  // sum 
-    T_19  // var_name 
-    T_20  // { 
-    T_21  // | 
-    T_22  // |= 
-    T_23  // |~ 
-    T_24  // } 
+    T_5  // < 
+    T_6  // <= 
+    T_7  // = 
+    T_8  // =~ 
+    T_9  // > 
+    T_10  // >= 
+    T_11  // by 
+    T_12  // count_over_time 
+    T_13  // duration 
+    T_14  // level 
+    T_15  // string 
+    T_16  // sum 
+    T_17  // var_name 
+    T_18  // { 
+    T_19  // | 
+    T_20  // |= 
+    T_21  // |~ 
+    T_22  // } 
 )
 
 var TypeToString = []string{ 
@@ -188,8 +186,6 @@ var TypeToString = []string{
     "T_20",
     "T_21",
     "T_22",
-    "T_23",
-    "T_24",
 }
 
 var StringToType = map[string] Type { 
@@ -218,8 +214,6 @@ var StringToType = map[string] Type {
     "T_20" : T_20, 
     "T_21" : T_21, 
     "T_22" : T_22, 
-    "T_23" : T_23, 
-    "T_24" : T_24, 
 }
 
 var TypeToID = []string { 
@@ -230,7 +224,6 @@ var TypeToID = []string {
     "(", 
     ")", 
     ",", 
-    ".", 
     "<", 
     "<=", 
     "=", 
@@ -240,7 +233,6 @@ var TypeToID = []string {
     "by", 
     "count_over_time", 
     "duration", 
-    "float", 
     "level", 
     "string", 
     "sum", 
@@ -260,31 +252,27 @@ var IDToType = map[string]Type {
     "(": 4, 
     ")": 5, 
     ",": 6, 
-    ".": 7, 
-    "<": 8, 
-    "<=": 9, 
-    "=": 10, 
-    "=~": 11, 
-    ">": 12, 
-    ">=": 13, 
-    "by": 14, 
-    "count_over_time": 15, 
-    "duration": 16, 
-    "float": 17, 
-    "level": 18, 
-    "string": 19, 
-    "sum": 20, 
-    "var_name": 21, 
-    "{": 22, 
-    "|": 23, 
-    "|=": 24, 
-    "|~": 25, 
-    "}": 26, 
+    "<": 7, 
+    "<=": 8, 
+    "=": 9, 
+    "=~": 10, 
+    ">": 11, 
+    ">=": 12, 
+    "by": 13, 
+    "count_over_time": 14, 
+    "duration": 15, 
+    "level": 16, 
+    "string": 17, 
+    "sum": 18, 
+    "var_name": 19, 
+    "{": 20, 
+    "|": 21, 
+    "|=": 22, 
+    "|~": 23, 
+    "}": 24, 
 }
 
 var Suppress = []bool { 
-    false, 
-    false, 
     false, 
     false, 
     false, 

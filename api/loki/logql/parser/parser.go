@@ -65,128 +65,108 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 		// p.DumpDescriptors()
 
 		switch L {
-		case slot.LabelFilter0R0: // LabelFilter : ∙| NestedLabelKey LabelFilterOp LabelFilterValue
+		case slot.DataFilter0R0: // DataFilter : ∙| string DataFilterOp string
 
-			p.bsrSet.Add(slot.LabelFilter0R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilter0R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if !p.testSelect(slot.LabelFilter0R1) {
-				p.parseError(slot.LabelFilter0R1, p.cI, first[slot.LabelFilter0R1])
+			if !p.testSelect(slot.DataFilter0R1) {
+				p.parseError(slot.DataFilter0R1, p.cI, first[slot.DataFilter0R1])
 				break
 			}
 
-			p.call(slot.LabelFilter0R2, cU, p.cI)
-		case slot.LabelFilter0R2: // LabelFilter : | NestedLabelKey ∙LabelFilterOp LabelFilterValue
-
-			if !p.testSelect(slot.LabelFilter0R2) {
-				p.parseError(slot.LabelFilter0R2, p.cI, first[slot.LabelFilter0R2])
+			p.bsrSet.Add(slot.DataFilter0R2, cU, p.cI, p.cI+1)
+			p.cI++
+			if !p.testSelect(slot.DataFilter0R2) {
+				p.parseError(slot.DataFilter0R2, p.cI, first[slot.DataFilter0R2])
 				break
 			}
 
-			p.call(slot.LabelFilter0R3, cU, p.cI)
-		case slot.LabelFilter0R3: // LabelFilter : | NestedLabelKey LabelFilterOp ∙LabelFilterValue
+			p.call(slot.DataFilter0R3, cU, p.cI)
+		case slot.DataFilter0R3: // DataFilter : | string DataFilterOp ∙string
 
-			if !p.testSelect(slot.LabelFilter0R3) {
-				p.parseError(slot.LabelFilter0R3, p.cI, first[slot.LabelFilter0R3])
+			if !p.testSelect(slot.DataFilter0R3) {
+				p.parseError(slot.DataFilter0R3, p.cI, first[slot.DataFilter0R3])
 				break
 			}
 
-			p.call(slot.LabelFilter0R4, cU, p.cI)
-		case slot.LabelFilter0R4: // LabelFilter : | NestedLabelKey LabelFilterOp LabelFilterValue ∙
-
-			if p.follow(symbols.NT_LabelFilter) {
-				p.rtn(symbols.NT_LabelFilter, cU, p.cI)
-			} else {
-				p.parseError(slot.LabelFilter0R0, p.cI, followSets[symbols.NT_LabelFilter])
-			}
-		case slot.LabelFilterOp0R0: // LabelFilterOp : ∙=
-
-			p.bsrSet.Add(slot.LabelFilterOp0R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilter0R4, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilter) {
+				p.rtn(symbols.NT_DataFilter, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp0R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilter0R0, p.cI, followSets[symbols.NT_DataFilter])
 			}
-		case slot.LabelFilterOp1R0: // LabelFilterOp : ∙!=
+		case slot.DataFilterOp0R0: // DataFilterOp : ∙=
 
-			p.bsrSet.Add(slot.LabelFilterOp1R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp0R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp1R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp0R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterOp2R0: // LabelFilterOp : ∙=~
+		case slot.DataFilterOp1R0: // DataFilterOp : ∙!=
 
-			p.bsrSet.Add(slot.LabelFilterOp2R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp1R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp2R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp1R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterOp3R0: // LabelFilterOp : ∙!~
+		case slot.DataFilterOp2R0: // DataFilterOp : ∙=~
 
-			p.bsrSet.Add(slot.LabelFilterOp3R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp2R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp3R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp2R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterOp4R0: // LabelFilterOp : ∙>=
+		case slot.DataFilterOp3R0: // DataFilterOp : ∙!~
 
-			p.bsrSet.Add(slot.LabelFilterOp4R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp3R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp4R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp3R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterOp5R0: // LabelFilterOp : ∙>
+		case slot.DataFilterOp4R0: // DataFilterOp : ∙>=
 
-			p.bsrSet.Add(slot.LabelFilterOp5R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp4R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp5R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp4R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterOp6R0: // LabelFilterOp : ∙<=
+		case slot.DataFilterOp5R0: // DataFilterOp : ∙>
 
-			p.bsrSet.Add(slot.LabelFilterOp6R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp5R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp6R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp5R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterOp7R0: // LabelFilterOp : ∙<
+		case slot.DataFilterOp6R0: // DataFilterOp : ∙<=
 
-			p.bsrSet.Add(slot.LabelFilterOp7R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp6R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterOp) {
-				p.rtn(symbols.NT_LabelFilterOp, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterOp7R0, p.cI, followSets[symbols.NT_LabelFilterOp])
+				p.parseError(slot.DataFilterOp6R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
-		case slot.LabelFilterValue0R0: // LabelFilterValue : ∙string
+		case slot.DataFilterOp7R0: // DataFilterOp : ∙<
 
-			p.bsrSet.Add(slot.LabelFilterValue0R1, cU, p.cI, p.cI+1)
+			p.bsrSet.Add(slot.DataFilterOp7R1, cU, p.cI, p.cI+1)
 			p.cI++
-			if p.follow(symbols.NT_LabelFilterValue) {
-				p.rtn(symbols.NT_LabelFilterValue, cU, p.cI)
+			if p.follow(symbols.NT_DataFilterOp) {
+				p.rtn(symbols.NT_DataFilterOp, cU, p.cI)
 			} else {
-				p.parseError(slot.LabelFilterValue0R0, p.cI, followSets[symbols.NT_LabelFilterValue])
-			}
-		case slot.LabelFilterValue1R0: // LabelFilterValue : ∙float
-
-			p.bsrSet.Add(slot.LabelFilterValue1R1, cU, p.cI, p.cI+1)
-			p.cI++
-			if p.follow(symbols.NT_LabelFilterValue) {
-				p.rtn(symbols.NT_LabelFilterValue, cU, p.cI)
-			} else {
-				p.parseError(slot.LabelFilterValue1R0, p.cI, followSets[symbols.NT_LabelFilterValue])
+				p.parseError(slot.DataFilterOp7R0, p.cI, followSets[symbols.NT_DataFilterOp])
 			}
 		case slot.LabelKey0R0: // LabelKey : ∙var_name
 
@@ -493,39 +473,6 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 			} else {
 				p.parseError(slot.MetricQuery0R0, p.cI, followSets[symbols.NT_MetricQuery])
 			}
-		case slot.NestedLabelKey0R0: // NestedLabelKey : ∙var_name
-
-			p.bsrSet.Add(slot.NestedLabelKey0R1, cU, p.cI, p.cI+1)
-			p.cI++
-			if p.follow(symbols.NT_NestedLabelKey) {
-				p.rtn(symbols.NT_NestedLabelKey, cU, p.cI)
-			} else {
-				p.parseError(slot.NestedLabelKey0R0, p.cI, followSets[symbols.NT_NestedLabelKey])
-			}
-		case slot.NestedLabelKey1R0: // NestedLabelKey : ∙var_name . NestedLabelKey
-
-			p.bsrSet.Add(slot.NestedLabelKey1R1, cU, p.cI, p.cI+1)
-			p.cI++
-			if !p.testSelect(slot.NestedLabelKey1R1) {
-				p.parseError(slot.NestedLabelKey1R1, p.cI, first[slot.NestedLabelKey1R1])
-				break
-			}
-
-			p.bsrSet.Add(slot.NestedLabelKey1R2, cU, p.cI, p.cI+1)
-			p.cI++
-			if !p.testSelect(slot.NestedLabelKey1R2) {
-				p.parseError(slot.NestedLabelKey1R2, p.cI, first[slot.NestedLabelKey1R2])
-				break
-			}
-
-			p.call(slot.NestedLabelKey1R3, cU, p.cI)
-		case slot.NestedLabelKey1R3: // NestedLabelKey : var_name . NestedLabelKey ∙
-
-			if p.follow(symbols.NT_NestedLabelKey) {
-				p.rtn(symbols.NT_NestedLabelKey, cU, p.cI)
-			} else {
-				p.parseError(slot.NestedLabelKey1R0, p.cI, followSets[symbols.NT_NestedLabelKey])
-			}
 		case slot.Pipeline0R0: // Pipeline : ∙LineFilter
 
 			p.call(slot.Pipeline0R1, cU, p.cI)
@@ -536,10 +483,10 @@ func (p *parser) parse() (*bsr.Set, []*Error) {
 			} else {
 				p.parseError(slot.Pipeline0R0, p.cI, followSets[symbols.NT_Pipeline])
 			}
-		case slot.Pipeline1R0: // Pipeline : ∙LabelFilter
+		case slot.Pipeline1R0: // Pipeline : ∙DataFilter
 
 			p.call(slot.Pipeline1R1, cU, p.cI)
-		case slot.Pipeline1R1: // Pipeline : LabelFilter ∙
+		case slot.Pipeline1R1: // Pipeline : DataFilter ∙
 
 			if p.follow(symbols.NT_Pipeline) {
 				p.rtn(symbols.NT_Pipeline, cU, p.cI)
@@ -858,179 +805,142 @@ func (p *parser) testSelect(l slot.Label) bool {
 }
 
 var first = []map[token.Type]string{
-	// LabelFilter : ∙| NestedLabelKey LabelFilterOp LabelFilterValue
+	// DataFilter : ∙| string DataFilterOp string
 	{
-		token.T_21: "|",
+		token.T_19: "|",
 	},
-	// LabelFilter : | ∙NestedLabelKey LabelFilterOp LabelFilterValue
+	// DataFilter : | ∙string DataFilterOp string
 	{
-		token.T_19: "var_name",
+		token.T_15: "string",
 	},
-	// LabelFilter : | NestedLabelKey ∙LabelFilterOp LabelFilterValue
+	// DataFilter : | string ∙DataFilterOp string
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_6:  "<",
-		token.T_7:  "<=",
-		token.T_8:  "=",
-		token.T_9:  "=~",
-		token.T_10: ">",
-		token.T_11: ">=",
+		token.T_5:  "<",
+		token.T_6:  "<=",
+		token.T_7:  "=",
+		token.T_8:  "=~",
+		token.T_9:  ">",
+		token.T_10: ">=",
 	},
-	// LabelFilter : | NestedLabelKey LabelFilterOp ∙LabelFilterValue
+	// DataFilter : | string DataFilterOp ∙string
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilter : | NestedLabelKey LabelFilterOp LabelFilterValue ∙
+	// DataFilter : | string DataFilterOp string ∙
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
-	// LabelFilterOp : ∙=
+	// DataFilterOp : ∙=
 	{
-		token.T_8: "=",
+		token.T_7: "=",
 	},
-	// LabelFilterOp : = ∙
+	// DataFilterOp : = ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙!=
+	// DataFilterOp : ∙!=
 	{
 		token.T_0: "!=",
 	},
-	// LabelFilterOp : != ∙
+	// DataFilterOp : != ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙=~
+	// DataFilterOp : ∙=~
 	{
-		token.T_9: "=~",
+		token.T_8: "=~",
 	},
-	// LabelFilterOp : =~ ∙
+	// DataFilterOp : =~ ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙!~
+	// DataFilterOp : ∙!~
 	{
 		token.T_1: "!~",
 	},
-	// LabelFilterOp : !~ ∙
+	// DataFilterOp : !~ ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙>=
+	// DataFilterOp : ∙>=
 	{
-		token.T_11: ">=",
+		token.T_10: ">=",
 	},
-	// LabelFilterOp : >= ∙
+	// DataFilterOp : >= ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙>
+	// DataFilterOp : ∙>
 	{
-		token.T_10: ">",
+		token.T_9: ">",
 	},
-	// LabelFilterOp : > ∙
+	// DataFilterOp : > ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙<=
+	// DataFilterOp : ∙<=
 	{
-		token.T_7: "<=",
+		token.T_6: "<=",
 	},
-	// LabelFilterOp : <= ∙
+	// DataFilterOp : <= ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
+		token.T_15: "string",
 	},
-	// LabelFilterOp : ∙<
+	// DataFilterOp : ∙<
 	{
-		token.T_6: "<",
+		token.T_5: "<",
 	},
-	// LabelFilterOp : < ∙
+	// DataFilterOp : < ∙
 	{
-		token.T_15: "float",
-		token.T_17: "string",
-	},
-	// LabelFilterValue : ∙string
-	{
-		token.T_17: "string",
-	},
-	// LabelFilterValue : string ∙
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
-	},
-	// LabelFilterValue : ∙float
-	{
-		token.T_15: "float",
-	},
-	// LabelFilterValue : float ∙
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_15: "string",
 	},
 	// LabelKey : ∙var_name
 	{
-		token.T_19: "var_name",
+		token.T_17: "var_name",
 	},
 	// LabelKey : var_name ∙
 	{
 		token.T_0: "!=",
 		token.T_1: "!~",
-		token.T_8: "=",
-		token.T_9: "=~",
+		token.T_7: "=",
+		token.T_8: "=~",
 	},
 	// LineFilter : ∙LineFilterOp string
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// LineFilter : LineFilterOp ∙string
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LineFilter : LineFilterOp string ∙
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// LineFilterOp : ∙|=
 	{
-		token.T_22: "|=",
+		token.T_20: "|=",
 	},
 	// LineFilterOp : |= ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LineFilterOp : ∙!=
 	{
@@ -1038,15 +948,15 @@ var first = []map[token.Type]string{
 	},
 	// LineFilterOp : != ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LineFilterOp : ∙|~
 	{
-		token.T_23: "|~",
+		token.T_21: "|~",
 	},
 	// LineFilterOp : |~ ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LineFilterOp : ∙!~
 	{
@@ -1054,81 +964,81 @@ var first = []map[token.Type]string{
 	},
 	// LineFilterOp : !~ ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LogQuery : ∙LogSelector PipelinesMaybe
 	{
-		token.T_20: "{",
+		token.T_18: "{",
 	},
 	// LogQuery : LogSelector ∙PipelinesMaybe
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// LogQuery : LogSelector PipelinesMaybe ∙
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// LogSelector : ∙{ LogSelectorMembersMaybe }
 	{
-		token.T_20: "{",
+		token.T_18: "{",
 	},
 	// LogSelector : { ∙LogSelectorMembersMaybe }
 	{
-		token.T_19: "var_name",
-		token.T_24: "}",
+		token.T_17: "var_name",
+		token.T_22: "}",
 	},
 	// LogSelector : { LogSelectorMembersMaybe ∙}
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelector : { LogSelectorMembersMaybe } ∙
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// LogSelectorMember : ∙LabelKey LogSelectorOp string
 	{
-		token.T_19: "var_name",
+		token.T_17: "var_name",
 	},
 	// LogSelectorMember : LabelKey ∙LogSelectorOp string
 	{
 		token.T_0: "!=",
 		token.T_1: "!~",
-		token.T_8: "=",
-		token.T_9: "=~",
+		token.T_7: "=",
+		token.T_8: "=~",
 	},
 	// LogSelectorMember : LabelKey LogSelectorOp ∙string
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LogSelectorMember : LabelKey LogSelectorOp string ∙
 	{
 		token.T_4:  ",",
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorMembers : ∙LogSelectorMember
 	{
-		token.T_19: "var_name",
+		token.T_17: "var_name",
 	},
 	// LogSelectorMembers : LogSelectorMember ∙
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorMembers : ∙LogSelectorMember , LogSelectorMembers
 	{
-		token.T_19: "var_name",
+		token.T_17: "var_name",
 	},
 	// LogSelectorMembers : LogSelectorMember ∙, LogSelectorMembers
 	{
@@ -1136,31 +1046,31 @@ var first = []map[token.Type]string{
 	},
 	// LogSelectorMembers : LogSelectorMember , ∙LogSelectorMembers
 	{
-		token.T_19: "var_name",
+		token.T_17: "var_name",
 	},
 	// LogSelectorMembers : LogSelectorMember , LogSelectorMembers ∙
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorMembersMaybe : ∙
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorMembersMaybe : ∙LogSelectorMembers
 	{
-		token.T_19: "var_name",
+		token.T_17: "var_name",
 	},
 	// LogSelectorMembersMaybe : LogSelectorMembers ∙
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorOp : ∙=
 	{
-		token.T_8: "=",
+		token.T_7: "=",
 	},
 	// LogSelectorOp : = ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LogSelectorOp : ∙!=
 	{
@@ -1168,15 +1078,15 @@ var first = []map[token.Type]string{
 	},
 	// LogSelectorOp : != ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LogSelectorOp : ∙=~
 	{
-		token.T_9: "=~",
+		token.T_8: "=~",
 	},
 	// LogSelectorOp : =~ ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LogSelectorOp : ∙!~
 	{
@@ -1184,15 +1094,15 @@ var first = []map[token.Type]string{
 	},
 	// LogSelectorOp : !~ ∙
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// MetricQuery : ∙sum by ( level ) ( count_over_time ( LogQuery duration ) )
 	{
-		token.T_18: "sum",
+		token.T_16: "sum",
 	},
 	// MetricQuery : sum ∙by ( level ) ( count_over_time ( LogQuery duration ) )
 	{
-		token.T_12: "by",
+		token.T_11: "by",
 	},
 	// MetricQuery : sum by ∙( level ) ( count_over_time ( LogQuery duration ) )
 	{
@@ -1200,7 +1110,7 @@ var first = []map[token.Type]string{
 	},
 	// MetricQuery : sum by ( ∙level ) ( count_over_time ( LogQuery duration ) )
 	{
-		token.T_16: "level",
+		token.T_14: "level",
 	},
 	// MetricQuery : sum by ( level ∙) ( count_over_time ( LogQuery duration ) )
 	{
@@ -1212,7 +1122,7 @@ var first = []map[token.Type]string{
 	},
 	// MetricQuery : sum by ( level ) ( ∙count_over_time ( LogQuery duration ) )
 	{
-		token.T_13: "count_over_time",
+		token.T_12: "count_over_time",
 	},
 	// MetricQuery : sum by ( level ) ( count_over_time ∙( LogQuery duration ) )
 	{
@@ -1220,11 +1130,11 @@ var first = []map[token.Type]string{
 	},
 	// MetricQuery : sum by ( level ) ( count_over_time ( ∙LogQuery duration ) )
 	{
-		token.T_20: "{",
+		token.T_18: "{",
 	},
 	// MetricQuery : sum by ( level ) ( count_over_time ( LogQuery ∙duration ) )
 	{
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// MetricQuery : sum by ( level ) ( count_over_time ( LogQuery duration ∙) )
 	{
@@ -1238,130 +1148,92 @@ var first = []map[token.Type]string{
 	{
 		token.EOF: "$",
 	},
-	// NestedLabelKey : ∙var_name
-	{
-		token.T_19: "var_name",
-	},
-	// NestedLabelKey : var_name ∙
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.T_6:  "<",
-		token.T_7:  "<=",
-		token.T_8:  "=",
-		token.T_9:  "=~",
-		token.T_10: ">",
-		token.T_11: ">=",
-	},
-	// NestedLabelKey : ∙var_name . NestedLabelKey
-	{
-		token.T_19: "var_name",
-	},
-	// NestedLabelKey : var_name ∙. NestedLabelKey
-	{
-		token.T_5: ".",
-	},
-	// NestedLabelKey : var_name . ∙NestedLabelKey
-	{
-		token.T_19: "var_name",
-	},
-	// NestedLabelKey : var_name . NestedLabelKey ∙
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.T_6:  "<",
-		token.T_7:  "<=",
-		token.T_8:  "=",
-		token.T_9:  "=~",
-		token.T_10: ">",
-		token.T_11: ">=",
-	},
 	// Pipeline : ∙LineFilter
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// Pipeline : LineFilter ∙
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
-	// Pipeline : ∙LabelFilter
+	// Pipeline : ∙DataFilter
 	{
-		token.T_21: "|",
+		token.T_19: "|",
 	},
-	// Pipeline : LabelFilter ∙
+	// Pipeline : DataFilter ∙
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// Pipelines : ∙Pipeline
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// Pipelines : Pipeline ∙
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// Pipelines : ∙Pipeline Pipelines
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// Pipelines : Pipeline ∙Pipelines
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// Pipelines : Pipeline Pipelines ∙
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// PipelinesMaybe : ∙
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// PipelinesMaybe : ∙Pipelines
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// PipelinesMaybe : Pipelines ∙
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// Query : ∙LogQuery
 	{
-		token.T_20: "{",
+		token.T_18: "{",
 	},
 	// Query : LogQuery ∙
 	{
@@ -1369,7 +1241,7 @@ var first = []map[token.Type]string{
 	},
 	// Query : ∙MetricQuery
 	{
-		token.T_18: "sum",
+		token.T_16: "sum",
 	},
 	// Query : MetricQuery ∙
 	{
@@ -1378,118 +1250,96 @@ var first = []map[token.Type]string{
 }
 
 var followSets = []map[token.Type]string{
-	// LabelFilter
+	// DataFilter
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
-	// LabelFilterOp
+	// DataFilterOp
 	{
-		token.T_15: "float",
-		token.T_17: "string",
-	},
-	// LabelFilterValue
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_15: "string",
 	},
 	// LabelKey
 	{
 		token.T_0: "!=",
 		token.T_1: "!~",
-		token.T_8: "=",
-		token.T_9: "=~",
+		token.T_7: "=",
+		token.T_8: "=~",
 	},
 	// LineFilter
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// LineFilterOp
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// LogQuery
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// LogSelector
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// LogSelectorMember
 	{
 		token.T_4:  ",",
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorMembers
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorMembersMaybe
 	{
-		token.T_24: "}",
+		token.T_22: "}",
 	},
 	// LogSelectorOp
 	{
-		token.T_17: "string",
+		token.T_15: "string",
 	},
 	// MetricQuery
 	{
 		token.EOF: "$",
-	},
-	// NestedLabelKey
-	{
-		token.T_0:  "!=",
-		token.T_1:  "!~",
-		token.T_6:  "<",
-		token.T_7:  "<=",
-		token.T_8:  "=",
-		token.T_9:  "=~",
-		token.T_10: ">",
-		token.T_11: ">=",
 	},
 	// Pipeline
 	{
 		token.T_0:  "!=",
 		token.T_1:  "!~",
 		token.EOF:  "$",
-		token.T_14: "duration",
-		token.T_21: "|",
-		token.T_22: "|=",
-		token.T_23: "|~",
+		token.T_13: "duration",
+		token.T_19: "|",
+		token.T_20: "|=",
+		token.T_21: "|~",
 	},
 	// Pipelines
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// PipelinesMaybe
 	{
 		token.EOF:  "$",
-		token.T_14: "duration",
+		token.T_13: "duration",
 	},
 	// Query
 	{

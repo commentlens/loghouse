@@ -20,14 +20,16 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		return nil, err
 	}
 	var filters []func(e *storage.LogEntry) bool
+	var filterErrs []error
 	logqlWalk(root, func(node bsr.BSR) {
 		switch node.Label.Slot().NT {
 		case symbols.NT_LogSelectorMember:
 			key := node.GetNTChildI(0).GetTChildI(0).LiteralString()
 			op := node.GetNTChildI(1).GetTChildI(0).LiteralString()
 			val := node.GetTChildI(2).LiteralString()
-			val, err := strconv.Unquote(val)
+			val, err := logqlUnquote(val)
 			if err != nil {
+				filterErrs = append(filterErrs, err)
 				return
 			}
 			switch op {
@@ -72,8 +74,9 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		case symbols.NT_LineFilter:
 			op := node.GetNTChildI(0).GetTChildI(0).LiteralString()
 			val := node.GetTChildI(1).LiteralString()
-			val, err := strconv.Unquote(val)
+			val, err := logqlUnquote(val)
 			if err != nil {
+				filterErrs = append(filterErrs, err)
 				return
 			}
 			switch op {
@@ -102,23 +105,19 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 					return !ok
 				})
 			}
-		case symbols.NT_LabelFilter:
-			var keyParts []string
-			for i, sym := range node.GetNTChildI(1).Label.Symbols() {
-				if sym.IsNonTerminal() {
-					continue
-				}
-				keyParts = append(keyParts, node.GetNTChildI(1).GetTChildI(i).LiteralString())
+		case symbols.NT_DataFilter:
+			key := node.GetTChildI(1).LiteralString()
+			key, err := logqlUnquote(key)
+			if err != nil {
+				filterErrs = append(filterErrs, err)
+				return
 			}
-			key := strings.Join(keyParts, "")
 			op := node.GetNTChildI(2).GetTChildI(0).LiteralString()
-			val := node.GetNTChildI(3).GetTChildI(0).LiteralString()
-			if strings.ContainsAny(val, "`\"") {
-				var err error
-				val, err = strconv.Unquote(val)
-				if err != nil {
-					return
-				}
+			val := node.GetTChildI(3).LiteralString()
+			val, err = logqlUnquote(val)
+			if err != nil {
+				filterErrs = append(filterErrs, err)
+				return
 			}
 			switch op {
 			case "=":
@@ -212,6 +211,9 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 			}
 		}
 	})
+	if len(filterErrs) > 0 {
+		return nil, filterErrs[0]
+	}
 	ropts.FilterFunc = func(e *storage.LogEntry) bool {
 		match := true
 		for _, filter := range filters {
@@ -235,6 +237,14 @@ func logqlParse(query string) (bsr.BSR, error) {
 		return bsr.BSR{}, fmt.Errorf("logql: ambiguous query %q", query)
 	}
 	return q.GetRoot(), nil
+}
+
+func logqlUnquote(s string) (string, error) {
+	raw, err := strconv.Unquote(s)
+	if err != nil {
+		return "", fmt.Errorf("logql: %w (%s)", err, s)
+	}
+	return raw, nil
 }
 
 func logqlWalk(node bsr.BSR, f func(bsr.BSR)) {
