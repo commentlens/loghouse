@@ -20,8 +20,7 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		return nil, err
 	}
 	var filters []func(e *storage.LogEntry) bool
-	var filterErrs []error
-	logqlWalk(root, func(node bsr.BSR) {
+	err = logqlWalk(root, func(node bsr.BSR) error {
 		switch node.Label.Slot().NT {
 		case symbols.NT_LogSelectorMember:
 			key := node.GetNTChildI(0).GetTChildI(0).LiteralString()
@@ -29,8 +28,7 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 			val := node.GetTChildI(2).LiteralString()
 			val, err := logqlUnquote(val)
 			if err != nil {
-				filterErrs = append(filterErrs, err)
-				return
+				return err
 			}
 			switch op {
 			case "=":
@@ -76,8 +74,7 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 			val := node.GetTChildI(1).LiteralString()
 			val, err := logqlUnquote(val)
 			if err != nil {
-				filterErrs = append(filterErrs, err)
-				return
+				return err
 			}
 			switch op {
 			case "|=":
@@ -109,15 +106,13 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 			key := node.GetTChildI(1).LiteralString()
 			key, err := logqlUnquote(key)
 			if err != nil {
-				filterErrs = append(filterErrs, err)
-				return
+				return err
 			}
 			op := node.GetNTChildI(2).GetTChildI(0).LiteralString()
 			val := node.GetTChildI(3).LiteralString()
 			val, err = logqlUnquote(val)
 			if err != nil {
-				filterErrs = append(filterErrs, err)
-				return
+				return err
 			}
 			switch op {
 			case "=":
@@ -210,9 +205,10 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 				})
 			}
 		}
+		return nil
 	})
-	if len(filterErrs) > 0 {
-		return nil, filterErrs[0]
+	if err != nil {
+		return nil, err
 	}
 	ropts.FilterFunc = func(e *storage.LogEntry) bool {
 		match := true
@@ -247,13 +243,20 @@ func logqlUnquote(s string) (string, error) {
 	return raw, nil
 }
 
-func logqlWalk(node bsr.BSR, f func(bsr.BSR)) {
-	f(node)
+func logqlWalk(node bsr.BSR, f func(bsr.BSR) error) error {
+	err := f(node)
+	if err != nil {
+		return err
+	}
 	for _, nts := range node.GetAllNTChildren() {
 		for _, nt := range nts {
-			logqlWalk(nt, f)
+			err := logqlWalk(nt, f)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func logqlIsHistogram(query string) (bool, error) {
@@ -262,11 +265,12 @@ func logqlIsHistogram(query string) (bool, error) {
 		return false, err
 	}
 	var isHistogram bool
-	logqlWalk(root, func(node bsr.BSR) {
+	logqlWalk(root, func(node bsr.BSR) error {
 		switch node.Label.Slot().NT {
 		case symbols.NT_MetricQuery:
 			isHistogram = true
 		}
+		return nil
 	})
 	return isHistogram, nil
 }
