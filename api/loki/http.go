@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/commentlens/loghouse/storage/label"
 	"github.com/julienschmidt/httprouter"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -26,6 +26,7 @@ const (
 type ServerOptions struct {
 	StorageReader storage.Reader
 	StorageWriter storage.Writer
+	LabelStore    *label.Store
 }
 
 func NewServer(opts *ServerOptions) http.Handler {
@@ -293,31 +294,7 @@ type LabelResponse struct {
 // https://grafana.com/docs/loki/latest/api/#list-labels-within-a-range-of-time
 func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	labels, _ := func() ([]string, error) {
-		query := r.URL.Query()
-		start, end, err := parseRange(query)
-		if err != nil {
-			return nil, err
-		}
-		es, err := opts.StorageReader.Read(&storage.ReadOptions{
-			Start: start,
-			End:   end,
-			Limit: ReadLimit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		m := make(map[string]struct{})
-		for _, e := range es {
-			for k := range e.Labels {
-				m[k] = struct{}{}
-			}
-		}
-		var labels []string
-		for k := range m {
-			labels = append(labels, k)
-		}
-		sort.Strings(labels)
-		return labels, nil
+		return opts.LabelStore.Labels(), nil
 	}()
 	json.NewEncoder(rw).Encode(LabelResponse{
 		Status: "success",
@@ -329,31 +306,7 @@ func (opts *ServerOptions) labels(rw http.ResponseWriter, r *http.Request, _ htt
 func (opts *ServerOptions) labelValues(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	labelValues, _ := func() ([]string, error) {
 		label := ps.ByName("name")
-		query := r.URL.Query()
-		start, end, err := parseRange(query)
-		if err != nil {
-			return nil, err
-		}
-		es, err := opts.StorageReader.Read(&storage.ReadOptions{
-			Start: start,
-			End:   end,
-			Limit: ReadLimit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		m := make(map[string]struct{})
-		for _, e := range es {
-			if v, ok := e.Labels[label]; ok {
-				m[v] = struct{}{}
-			}
-		}
-		var labelValues []string
-		for k := range m {
-			labelValues = append(labelValues, k)
-		}
-		sort.Strings(labelValues)
-		return labelValues, nil
+		return opts.LabelStore.LabelValues(label), nil
 	}()
 	json.NewEncoder(rw).Encode(LabelResponse{
 		Status: "success",
@@ -369,31 +322,9 @@ type SeriesResponse struct {
 // https://grafana.com/docs/loki/latest/api/#list-series
 func (opts *ServerOptions) series(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	kvs, _ := func() ([]map[string]string, error) {
-		query := r.URL.Query()
-		start, end, err := parseRange(query)
-		if err != nil {
-			return nil, err
-		}
-		es, err := opts.StorageReader.Read(&storage.ReadOptions{
-			Start: start,
-			End:   end,
-			Limit: ReadLimit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		m := make(map[string]map[string]struct{})
-		for _, e := range es {
-			for k, v := range e.Labels {
-				if _, ok := m[k]; !ok {
-					m[k] = make(map[string]struct{})
-				}
-				m[k][v] = struct{}{}
-			}
-		}
 		var kvs []map[string]string
-		for k, kv := range m {
-			for v := range kv {
+		for _, k := range opts.LabelStore.Labels() {
+			for _, v := range opts.LabelStore.LabelValues(k) {
 				kvs = append(kvs, map[string]string{k: v})
 			}
 		}
@@ -418,6 +349,9 @@ func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httpr
 			return err
 		}
 		for _, stream := range pr.Streams {
+			for k, v := range stream.Stream {
+				opts.LabelStore.Add(k, v)
+			}
 			var es []*storage.LogEntry
 			for _, v := range stream.Values {
 				if len(v) != 2 {

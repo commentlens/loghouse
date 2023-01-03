@@ -9,6 +9,7 @@ import (
 
 	"github.com/commentlens/loghouse/api/loki"
 	"github.com/commentlens/loghouse/storage/filesystem"
+	"github.com/commentlens/loghouse/storage/label"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -32,6 +33,7 @@ func main() {
 	srv := &http.Server{Addr: ":3100", Handler: loki.NewServer(&loki.ServerOptions{
 		StorageReader: r,
 		StorageWriter: w,
+		LabelStore:    label.NewStore(1000),
 	})}
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
