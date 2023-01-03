@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/commentlens/loghouse/storage"
 )
@@ -42,14 +41,46 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var es []*storage.LogEntry
 	var done bool
 	for _, chunk := range r.Chunks {
-		err := func() error {
+		ok, err := func() (bool, error) {
+			f, err := os.Open(chunk)
+			if err != nil {
+				return false, err
+			}
+			defer f.Close()
+
+			esBlob, err := readBlob(f, &storage.ReadOptions{
+				Limit: 1,
+			})
+			if err != nil {
+				return false, err
+			}
+			if len(esBlob) != 1 {
+				return false, nil
+			}
+			if !storage.MatchLabels(esBlob[0].Labels, opts.Labels) {
+				return false, nil
+			}
+			if !opts.End.IsZero() && opts.End.Before(esBlob[0].Time) {
+				return false, nil
+			}
+			return true, nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		err = func() error {
 			f, err := os.Open(chunk)
 			if err != nil {
 				return err
 			}
 			defer f.Close()
 
-			esBlob, err := readBlob(f, opts)
+			optsNoLabel := *opts
+			optsNoLabel.Labels = nil
+			esBlob, err := readBlob(f, &optsNoLabel)
 			if err != nil {
 				return err
 			}
@@ -67,6 +98,5 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 			break
 		}
 	}
-	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 	return es, nil
 }

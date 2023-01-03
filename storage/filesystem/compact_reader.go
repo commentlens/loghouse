@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"context"
-	"sort"
 	"sync"
 
 	"github.com/commentlens/loghouse/storage"
@@ -21,10 +20,9 @@ type compactReader struct{}
 func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var wg sync.WaitGroup
 
-	chIn := make(chan struct {
-		Type string
-		File string
-	})
+	type readerTypeChunk string
+	type readerTypeIndex string
+	chIn := make(chan interface{})
 	chOut := make(chan []*storage.LogEntry)
 
 	for i := 0; i < CompactReaderConcurrency; i++ {
@@ -34,11 +32,11 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 
 			for t := range chIn {
 				var r storage.Reader
-				switch t.Type {
-				case "chunk":
-					r = NewReader([]string{t.File})
-				case "index":
-					r = newBlobReader([]string{t.File})
+				switch t := t.(type) {
+				case readerTypeChunk:
+					r = NewReader([]string{string(t)})
+				case readerTypeIndex:
+					r = newBlobReader([]string{string(t)})
 				}
 				es, err := r.Read(opts)
 				if err != nil {
@@ -52,13 +50,20 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 		}()
 	}
 
+	var readers []interface{}
+	indexFiles, err := findFiles(CompactDir, CompactIndexFile)
+	if err != nil {
+		return nil, err
+	}
+	for _, indexFile := range indexFiles {
+		readers = append(readers, readerTypeIndex(indexFile))
+	}
 	chunks, err := findFiles(WriteDir, WriteChunkFile)
 	if err != nil {
 		return nil, err
 	}
-	indexFiles, err := findFiles(CompactDir, CompactIndexFile)
-	if err != nil {
-		return nil, err
+	for _, chunk := range chunks {
+		readers = append(readers, readerTypeChunk(chunk))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -69,30 +74,11 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 		defer wg.Wait()
 		defer close(chIn)
 
-		for _, chunk := range chunks {
+		for _, rd := range readers {
 			select {
 			case <-ctx.Done():
 				return
-			case chIn <- struct {
-				Type string
-				File string
-			}{
-				Type: "chunk",
-				File: chunk,
-			}:
-			}
-		}
-		for _, indexFile := range indexFiles {
-			select {
-			case <-ctx.Done():
-				return
-			case chIn <- struct {
-				Type string
-				File string
-			}{
-				Type: "index",
-				File: indexFile,
-			}:
+			case chIn <- rd:
 			}
 		}
 	}()
@@ -109,6 +95,5 @@ func (r *compactReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, er
 			cancel()
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Time.Before(out[j].Time) })
 	return out, nil
 }

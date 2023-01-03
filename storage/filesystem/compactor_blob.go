@@ -35,14 +35,17 @@ func readBlob(r io.Reader, opts *storage.ReadOptions) ([]*storage.LogEntry, erro
 		if err != nil {
 			return nil, err
 		}
-		out, err := storage.Filter([]*storage.LogEntry{&e}, opts)
-		if err != nil {
-			return nil, err
+		if !storage.MatchLogEntry(&e, opts) {
+			continue
 		}
-		es = append(es, out...)
-		if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
-			es = es[:opts.Limit]
-			return es, nil
+		if opts.ResultFunc != nil {
+			opts.ResultFunc(&e)
+		} else {
+			es = append(es, &e)
+			if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
+				es = es[:opts.Limit]
+				return es, nil
+			}
 		}
 	}
 	err := scanner.Err()

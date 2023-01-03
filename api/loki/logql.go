@@ -211,14 +211,12 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		return nil, err
 	}
 	ropts.FilterFunc = func(e *storage.LogEntry) bool {
-		match := true
 		for _, filter := range filters {
 			if !filter(e) {
-				match = false
-				break
+				return false
 			}
 		}
-		return match
+		return true
 	}
 	return r.Read(ropts)
 }

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
@@ -108,45 +110,31 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				return nil, err
 			}
 			var values [][]interface{}
-			histoStart := start
-			storageStart := histoStart
-			var count uint64
-			flushCount := func() {
-				if count > 0 {
-					values = append(values, []interface{}{
-						histoStart.Unix(),
-						fmt.Sprint(count),
-					})
-				}
-			}
-			for storageStart.Before(end) {
-				storageEnd := storageStart.Add(7 * 24 * time.Hour)
-				es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
-					Start: storageStart,
-					End:   storageEnd,
-					Limit: 100_000,
+			if start.Before(end) && step > 0 {
+				histogram := make([]uint64, end.Sub(start)/step)
+				var mu sync.Mutex
+				_, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+					Start: start,
+					End:   end,
+					ResultFunc: func(e *storage.LogEntry) {
+						mu.Lock()
+						defer mu.Unlock()
+
+						i := e.Time.Sub(start) / step
+						histogram[i] += 1
+					},
 				}, query.Get("query"))
 				if err != nil {
 					return nil, err
 				}
-				if len(es) == 0 {
-					storageStart = storageEnd
-					continue
-				}
-				for _, e := range es {
-				START_COUNT:
-					storageStart = e.Time.Add(1)
-
-					if e.Time.Before(histoStart.Add(step)) {
-						count++
-					} else {
-						flushCount()
-						histoStart = histoStart.Add(step)
-						count = 0
-						goto START_COUNT
+				for i, count := range histogram {
+					if count > 0 {
+						values = append(values, []interface{}{
+							start.Add(time.Duration(i) * step).Unix(),
+							fmt.Sprint(count),
+						})
 					}
 				}
-				flushCount()
 			}
 			return []*Matrix{{
 				Values: values,
@@ -161,7 +149,9 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			return nil, err
 		}
 		if query.Get("direction") == "backward" {
-			reverse(es)
+			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.After(es[j].Time) })
+		} else {
+			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 		}
 		return createStreams(es)
 	}()
@@ -186,13 +176,6 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		Status: "success",
 		Data:   data,
 	})
-}
-
-func reverse(s []*storage.LogEntry) {
-	for i := 0; i < len(s)/2; i++ {
-		j := len(s) - i - 1
-		s[i], s[j] = s[j], s[i]
-	}
 }
 
 func createStreams(es []*storage.LogEntry) ([]*Stream, error) {

@@ -53,14 +53,7 @@ type compactIndex struct {
 func filterIndex(indexList []*compactIndex, opts *storage.ReadOptions) ([]*compactIndex, error) {
 	var out []*compactIndex
 	for _, index := range indexList {
-		matchLabels := true
-		for k, v := range opts.Labels {
-			if v2, ok := index.Labels[k]; !ok || v != v2 {
-				matchLabels = false
-				break
-			}
-		}
-		if !matchLabels {
+		if !storage.MatchLabels(index.Labels, opts.Labels) {
 			continue
 		}
 		if !opts.Start.IsZero() && opts.Start.After(index.End) {
@@ -112,13 +105,16 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 				return err
 			}
 			defer f.Close()
+
 			for _, index := range indexList {
 				var r io.Reader = io.NewSectionReader(f, int64(index.BytesStart), int64(index.BytesEnd)-int64(index.BytesStart))
 				switch index.Compression {
 				case "s2":
 					r = s2.NewReader(r)
 				}
-				esBlob, err := readBlob(r, opts)
+				optsNoLabel := *opts
+				optsNoLabel.Labels = nil
+				esBlob, err := readBlob(r, &optsNoLabel)
 				if err != nil {
 					return err
 				}
@@ -138,7 +134,6 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 			break
 		}
 	}
-	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 	return es, nil
 }
 
@@ -180,6 +175,8 @@ func writeIndexAndBlob(chunks []string) error {
 		if len(es) == 0 {
 			continue
 		}
+		sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+
 		buf := new(bytes.Buffer)
 		compression := CompactBlobCompression
 		var w io.Writer = buf
