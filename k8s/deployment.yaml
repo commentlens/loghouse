@@ -32,7 +32,7 @@ spec:
       restartPolicy: Always
       containers:
         - name: loghouse
-          image: gcr.io/fathom-production/loghouse:master
+          image: ghcr.io/commentlens/loghouse
           volumeMounts:
             - name: loghouse-data
               mountPath: /data
