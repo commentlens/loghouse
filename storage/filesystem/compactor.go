@@ -22,7 +22,7 @@ const (
 	CompactChunkIdlePeriod = 2 * time.Hour
 	CompactChunkMaxAge     = 6 * time.Hour
 	CompactChunkMaxCount   = 1000
-	CompactChunkMaxSize    = 1024 * 1024 * 100
+	CompactChunkMaxSize    = 1024 * 1024 * 1024
 	CompactIndexFile       = "index"
 	CompactBlobFile        = "blob"
 	CompactBlobCompression = "s2"
