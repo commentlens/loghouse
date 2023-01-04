@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -39,10 +40,14 @@ func TestReader(t *testing.T) {
 	require.NoError(t, err)
 
 	r := NewReader(chunks)
-	esRead, err := r.Read(&storage.ReadOptions{
+	var esRead []*storage.LogEntry
+	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app":  "test",
 			"role": "test2",
+		},
+		ResultFunc: func(e *storage.LogEntry) {
+			esRead = append(esRead, e)
 		},
 	})
 	require.NoError(t, err)

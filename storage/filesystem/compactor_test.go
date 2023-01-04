@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -157,21 +158,29 @@ func TestCompactor(t *testing.T) {
 	require.NoError(t, err)
 	br := newBlobReader(indexFiles)
 
-	esRead, err := br.Read(&storage.ReadOptions{
+	var esReadNew []*storage.LogEntry
+	err = br.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"role": "test5",
 		},
-	})
-	require.NoError(t, err)
-	require.Len(t, esRead, 0)
-
-	esRead, err = br.Read(&storage.ReadOptions{
-		Labels: map[string]string{
-			"app": "test",
+		ResultFunc: func(e *storage.LogEntry) {
+			esReadNew = append(esReadNew, e)
 		},
 	})
 	require.NoError(t, err)
-	require.ElementsMatch(t, es, esRead)
+	require.Len(t, esReadNew, 0)
+
+	var esReadOld []*storage.LogEntry
+	err = br.Read(context.Background(), &storage.ReadOptions{
+		Labels: map[string]string{
+			"app": "test",
+		},
+		ResultFunc: func(e *storage.LogEntry) {
+			esReadOld = append(esReadOld, e)
+		},
+	})
+	require.NoError(t, err)
+	require.ElementsMatch(t, es, esReadOld)
 }
 
 func TestCompactReadWriter(t *testing.T) {
@@ -209,13 +218,22 @@ func TestCompactReadWriter(t *testing.T) {
 	require.NoError(t, err)
 
 	r := NewCompactReader()
-	esRead, err := r.Read(&storage.ReadOptions{
+	var mu sync.Mutex
+
+	var esReadBefore []*storage.LogEntry
+	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},
+		ResultFunc: func(e *storage.LogEntry) {
+			mu.Lock()
+			defer mu.Unlock()
+
+			esReadBefore = append(esReadBefore, e)
+		},
 	})
 	require.NoError(t, err)
-	require.ElementsMatch(t, es, esRead)
+	require.ElementsMatch(t, es, esReadBefore)
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
@@ -227,11 +245,18 @@ func TestCompactReadWriter(t *testing.T) {
 	err = os.RemoveAll(WriteDir)
 	require.NoError(t, err)
 
-	esRead, err = r.Read(&storage.ReadOptions{
+	var esReadAfter []*storage.LogEntry
+	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},
+		ResultFunc: func(e *storage.LogEntry) {
+			mu.Lock()
+			defer mu.Unlock()
+
+			esReadAfter = append(esReadAfter, e)
+		},
 	})
 	require.NoError(t, err)
-	require.ElementsMatch(t, es, esRead)
+	require.ElementsMatch(t, es, esReadAfter)
 }

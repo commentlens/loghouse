@@ -3,6 +3,7 @@ package loki
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -94,6 +95,9 @@ func (opts *ServerOptions) query(rw http.ResponseWriter, r *http.Request, ps htt
 
 // https://grafana.com/docs/loki/latest/api/#query-loki-over-a-range-of-time
 func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
 	result, err := func() (interface{}, error) {
 		query := r.URL.Query()
 		start, end, err := parseRange(query)
@@ -113,7 +117,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			if start.Before(end) && step > 0 {
 				histogram := make([]uint64, end.Sub(start)/step)
 				var mu sync.Mutex
-				_, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+				err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
 					Start: start,
 					End:   end,
 					ResultFunc: func(e *storage.LogEntry) {
@@ -140,12 +144,23 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				Values: values,
 			}}, nil
 		}
-		es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+		var es []*storage.LogEntry
+		var mu sync.Mutex
+		err = logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
 			Start: start,
 			End:   end,
-			Limit: ReadLimit,
+			ResultFunc: func(e *storage.LogEntry) {
+				mu.Lock()
+				defer mu.Unlock()
+
+				if len(es) < ReadLimit {
+					es = append(es, e)
+				} else {
+					cancel()
+				}
+			},
 		}, query.Get("query"))
-		if err != nil {
+		if err != nil && !errors.Is(err, context.Canceled) {
 			return nil, err
 		}
 		if query.Get("direction") == "backward" {
@@ -240,10 +255,17 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 		defer ticker.Stop()
 
 		for {
-			es, err := logqlRead(opts.StorageReader, &storage.ReadOptions{
+			var es []*storage.LogEntry
+			var mu sync.Mutex
+			err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
 				Start: start,
 				End:   end,
-				Limit: ReadLimit,
+				ResultFunc: func(e *storage.LogEntry) {
+					mu.Lock()
+					defer mu.Unlock()
+
+					es = append(es, e)
+				},
 			}, query.Get("query"))
 			if err != nil {
 				return err

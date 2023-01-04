@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"io"
 
@@ -30,35 +31,27 @@ func readIndex(r io.Reader) ([]*compactIndex, error) {
 	return indexList, nil
 }
 
-func readBlob(r io.Reader, opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	var es []*storage.LogEntry
+func readBlob(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error {
 	buf := make([]byte, BlobLineMaxSize)
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(buf, BlobLineMaxSize)
 	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var e storage.LogEntry
 		err := json.Unmarshal([]byte(scanner.Text()), &e)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if !storage.MatchLogEntry(&e, opts) {
 			continue
 		}
-		if opts.ResultFunc != nil {
-			opts.ResultFunc(&e)
-		} else {
-			es = append(es, &e)
-			if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
-				es = es[:opts.Limit]
-				return es, nil
-			}
-		}
+		opts.ResultFunc(&e)
 	}
-	err := scanner.Err()
-	if err != nil {
-		return nil, err
-	}
-	return es, nil
+	return scanner.Err()
 }
 
 func writeIndex(w io.Writer, indexList []*compactIndex) error {

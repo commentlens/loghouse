@@ -1,6 +1,7 @@
 package loki
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -14,10 +15,10 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*storage.LogEntry, error) {
+func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions, query string) error {
 	root, err := logqlParse(query)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var filters []func(e *storage.LogEntry) bool
 	err = logqlWalk(root, func(node bsr.BSR) error {
@@ -208,7 +209,7 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	ropts.FilterFunc = func(e *storage.LogEntry) bool {
 		for _, filter := range filters {
@@ -218,7 +219,7 @@ func logqlRead(r storage.Reader, ropts *storage.ReadOptions, query string) ([]*s
 		}
 		return true
 	}
-	return r.Read(ropts)
+	return r.Read(ctx, ropts)
 }
 
 func logqlParse(query string) (bsr.BSR, error) {

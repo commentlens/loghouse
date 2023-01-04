@@ -1,11 +1,12 @@
 package storage
 
 import (
+	"context"
 	"time"
 )
 
 type Reader interface {
-	Read(*ReadOptions) ([]*LogEntry, error)
+	Read(context.Context, *ReadOptions) error
 }
 
 type ReadOptions struct {
@@ -14,7 +15,6 @@ type ReadOptions struct {
 	End        time.Time
 	FilterFunc func(*LogEntry) bool
 	ResultFunc func(*LogEntry)
-	Limit      uint64
 }
 
 func MatchLabels(m, query map[string]string) bool {

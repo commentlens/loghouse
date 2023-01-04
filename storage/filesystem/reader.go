@@ -1,6 +1,8 @@
 package filesystem
 
 import (
+	"context"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -37,9 +39,7 @@ type reader struct {
 	Chunks []string
 }
 
-func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	var es []*storage.LogEntry
-	var done bool
+func (r *reader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 	for _, chunk := range r.Chunks {
 		ok, err := func() (bool, error) {
 			f, err := os.Open(chunk)
@@ -48,25 +48,34 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 			}
 			defer f.Close()
 
-			esBlob, err := readBlob(f, &storage.ReadOptions{
-				Limit: 1,
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			var first *storage.LogEntry
+			err = readBlob(ctx, f, &storage.ReadOptions{
+				ResultFunc: func(e *storage.LogEntry) {
+					if first == nil {
+						first = e
+						cancel()
+					}
+				},
 			})
-			if err != nil {
+			if err != nil && !errors.Is(err, context.Canceled) {
 				return false, err
 			}
-			if len(esBlob) != 1 {
+			if first == nil {
 				return false, nil
 			}
-			if !storage.MatchLabels(esBlob[0].Labels, opts.Labels) {
+			if !storage.MatchLabels(first.Labels, opts.Labels) {
 				return false, nil
 			}
-			if !opts.End.IsZero() && opts.End.Before(esBlob[0].Time) {
+			if !opts.End.IsZero() && opts.End.Before(first.Time) {
 				return false, nil
 			}
 			return true, nil
 		}()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if !ok {
 			continue
@@ -80,23 +89,11 @@ func (r *reader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 
 			optsNoLabel := *opts
 			optsNoLabel.Labels = nil
-			esBlob, err := readBlob(f, &optsNoLabel)
-			if err != nil {
-				return err
-			}
-			es = append(es, esBlob...)
-			if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
-				es = es[:opts.Limit]
-				done = true
-			}
-			return nil
+			return readBlob(ctx, f, &optsNoLabel)
 		}()
 		if err != nil {
-			return nil, err
-		}
-		if done {
-			break
+			return err
 		}
 	}
-	return es, nil
+	return nil
 }

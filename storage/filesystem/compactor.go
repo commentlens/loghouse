@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,8 +23,8 @@ const (
 	CompactChunkFile       = "chunk.jsonl.tmp"
 	CompactChunkMinAge     = 2 * time.Hour
 	CompactChunkMaxAge     = 8 * time.Hour
-	CompactChunkMinSize    = 1024 * 1024 * 50
-	CompactChunkMaxSize    = 1024 * 1024 * 200
+	CompactChunkMinSize    = 1024 * 1024 * 25
+	CompactChunkMaxSize    = 1024 * 1024 * 100
 	CompactIndexFile       = "index"
 	CompactBlobFile        = "blob"
 	CompactBlobCompression = "s2"
@@ -76,9 +77,7 @@ func newBlobReader(indexFiles []string) storage.Reader {
 	return &blobReader{IndexFiles: indexFiles}
 }
 
-func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
-	var es []*storage.LogEntry
-	var done bool
+func (r *blobReader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 	for _, indexFile := range r.IndexFiles {
 		indexList, err := func() ([]*compactIndex, error) {
 			f, err := os.Open(indexFile)
@@ -94,7 +93,7 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 			return filterIndex(indexList, opts)
 		}()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if len(indexList) == 0 {
 			continue
@@ -115,27 +114,18 @@ func (r *blobReader) Read(opts *storage.ReadOptions) ([]*storage.LogEntry, error
 				}
 				optsNoLabel := *opts
 				optsNoLabel.Labels = nil
-				esBlob, err := readBlob(r, &optsNoLabel)
+				err := readBlob(ctx, r, &optsNoLabel)
 				if err != nil {
 					return err
-				}
-				es = append(es, esBlob...)
-				if opts.Limit > 0 && uint64(len(es)) >= opts.Limit {
-					es = es[:opts.Limit]
-					done = true
-					return nil
 				}
 			}
 			return nil
 		}()
 		if err != nil {
-			return nil, err
-		}
-		if done {
-			break
+			return err
 		}
 	}
-	return es, nil
+	return nil
 }
 
 func compact() error {
@@ -163,7 +153,12 @@ func writeIndexAndBlob(chunks []string) error {
 	var bytesTotal uint64
 	for _, chunk := range chunks {
 		r := NewReader([]string{chunk})
-		es, err := r.Read(&storage.ReadOptions{})
+		var es []*storage.LogEntry
+		err := r.Read(context.Background(), &storage.ReadOptions{
+			ResultFunc: func(e *storage.LogEntry) {
+				es = append(es, e)
+			},
+		})
 		if err != nil {
 			return err
 		}
