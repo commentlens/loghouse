@@ -84,7 +84,7 @@ func TestCompactor(t *testing.T) {
 
 	dirs, files, err := dirfiles(WriteDir)
 	require.NoError(t, err)
-	require.Len(t, dirs, 5)
+	require.Len(t, dirs, 4)
 	require.Len(t, files, 3)
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestCompactor(t *testing.T) {
 
 	dirs, files, err = dirfiles(WriteDir)
 	require.NoError(t, err)
-	require.Len(t, dirs, 5)
+	require.Len(t, dirs, 4)
 	require.Len(t, files, 0)
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestCompactor(t *testing.T) {
 
 	dirs, files, err = dirfiles(WriteDir)
 	require.NoError(t, err)
-	require.Len(t, dirs, 4)
+	require.Len(t, dirs, 3)
 	require.Len(t, files, 2)
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)

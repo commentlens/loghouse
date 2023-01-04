@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/djherbis/times"
 	"github.com/klauspost/compress/s2"
 	"github.com/oklog/ulid/v2"
 )
@@ -19,10 +20,10 @@ import (
 const (
 	CompactDir             = "data/compact"
 	CompactChunkFile       = "chunk.jsonl.tmp"
-	CompactChunkIdlePeriod = 2 * time.Hour
-	CompactChunkMaxAge     = 6 * time.Hour
-	CompactChunkMaxCount   = 1000
-	CompactChunkMaxSize    = 1024 * 1024 * 100
+	CompactChunkMinAge     = 2 * time.Hour
+	CompactChunkMaxAge     = 8 * time.Hour
+	CompactChunkMinSize    = 1024 * 1024 * 50
+	CompactChunkMaxSize    = 1024 * 1024 * 200
 	CompactIndexFile       = "index"
 	CompactBlobFile        = "blob"
 	CompactBlobCompression = "s2"
@@ -254,14 +255,25 @@ func chunkCompactible(chunk string) (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	if fi.Size() >= CompactChunkMaxSize {
+	fsize := fi.Size()
+	if fsize >= CompactChunkMaxSize {
 		return 2, nil
 	}
-	mtime := fi.ModTime()
-	if time.Since(mtime) >= CompactChunkMaxAge {
+	if fsize >= CompactChunkMinSize {
+		return 1, nil
+	}
+	t, err := times.Stat(chunk)
+	if err != nil {
+		return 0, err
+	}
+	if !t.HasBirthTime() {
+		return 0, nil
+	}
+	age := time.Since(t.BirthTime())
+	if age >= CompactChunkMaxAge {
 		return 2, nil
 	}
-	if time.Since(mtime) >= CompactChunkIdlePeriod {
+	if age >= CompactChunkMinAge {
 		return 1, nil
 	}
 	return 0, nil
@@ -287,10 +299,7 @@ func swapChunk() error {
 	}
 	var swappable [][]string
 	if len(nowChunks) > 0 {
-		swappable = append(swappable, nowChunks)
-	}
-	if len(laterChunks) >= CompactChunkMaxCount {
-		swappable = append(swappable, laterChunks)
+		swappable = append(swappable, nowChunks, laterChunks)
 	}
 	for _, chunks := range swappable {
 		for _, chunk := range chunks {

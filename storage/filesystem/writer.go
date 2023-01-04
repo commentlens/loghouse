@@ -10,7 +10,6 @@ import (
 
 const (
 	WriteDir       = "data/incompact"
-	WriteTimeDir   = "2006-01-02"
 	WriteChunkFile = "chunk.jsonl"
 )
 
@@ -21,12 +20,11 @@ func NewWriter() storage.Writer {
 type writer struct{}
 
 func logEntryDir(e *storage.LogEntry) (string, error) {
-	timeDir := e.Time.UTC().Format(WriteTimeDir)
 	hashDir, err := storage.HashLabels(e.Labels)
 	if err != nil {
 		return "", err
 	}
-	dir := fmt.Sprintf("%s/%s/%s", WriteDir, timeDir, hashDir)
+	dir := fmt.Sprintf("%s/%s", WriteDir, hashDir)
 	return dir, nil
 }
 

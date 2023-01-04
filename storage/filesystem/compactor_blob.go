@@ -8,6 +8,10 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
+const (
+	BlobLineMaxSize = 10 * 1024 * 1024
+)
+
 func readIndex(r io.Reader) ([]*compactIndex, error) {
 	var indexList []*compactIndex
 	scanner := bufio.NewScanner(r)
@@ -28,7 +32,9 @@ func readIndex(r io.Reader) ([]*compactIndex, error) {
 
 func readBlob(r io.Reader, opts *storage.ReadOptions) ([]*storage.LogEntry, error) {
 	var es []*storage.LogEntry
+	buf := make([]byte, BlobLineMaxSize)
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(buf, BlobLineMaxSize)
 	for scanner.Scan() {
 		var e storage.LogEntry
 		err := json.Unmarshal([]byte(scanner.Text()), &e)

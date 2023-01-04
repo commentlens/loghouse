@@ -46,5 +46,8 @@ func main() {
 		<-ctx.Done()
 		return srv.Shutdown(context.Background())
 	})
-	g.Wait()
+	err := g.Wait()
+	if err != nil {
+		log.WithError(err).Warn("stopped with error")
+	}
 }
