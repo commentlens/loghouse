@@ -22,7 +22,7 @@ const (
 	CompactChunkIdlePeriod = 2 * time.Hour
 	CompactChunkMaxAge     = 6 * time.Hour
 	CompactChunkMaxCount   = 1000
-	CompactChunkMaxSize    = 1024 * 1024 * 1024
+	CompactChunkMaxSize    = 1024 * 1024 * 100
 	CompactIndexFile       = "index"
 	CompactBlobFile        = "blob"
 	CompactBlobCompression = "s2"
@@ -146,12 +146,6 @@ func compact() error {
 	if err != nil {
 		return err
 	}
-	for _, chunk := range chunks {
-		err := os.RemoveAll(chunk)
-		if err != nil {
-			return err
-		}
-	}
 	err = removeEmptyDir(WriteDir, CompactChunkMaxAge)
 	if err != nil {
 		return err
@@ -238,6 +232,10 @@ func writeIndexAndBlob(chunks []string) error {
 				Compression: compression,
 			}})
 		}()
+		if err != nil {
+			return err
+		}
+		err = os.RemoveAll(chunk)
 		if err != nil {
 			return err
 		}
