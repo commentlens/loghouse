@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	ReadLimit    = 1000
+	ReadLimit    = 100
 	ReadRange    = time.Hour
 	TailInterval = 15 * time.Second
 	TailDelay    = 5 * time.Second
@@ -115,7 +115,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			var values [][]interface{}
 			if start.Before(end) && step > 0 {
-				histogram := make([]uint64, end.Sub(start)/step)
+				histogram := make([]uint64, end.Sub(start)/step+1)
 				var mu sync.Mutex
 				err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
 					Start: start,
@@ -144,6 +144,14 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				Values: values,
 			}}, nil
 		}
+		var readLimit uint64 = ReadLimit
+		if limit := query.Get("limit"); limit != "" {
+			n, err := strconv.ParseUint(limit, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			readLimit = n
+		}
 		var es []*storage.LogEntry
 		var mu sync.Mutex
 		err = logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
@@ -153,7 +161,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				mu.Lock()
 				defer mu.Unlock()
 
-				if len(es) < ReadLimit {
+				if uint64(len(es)) < readLimit {
 					es = append(es, e)
 				} else {
 					cancel()
