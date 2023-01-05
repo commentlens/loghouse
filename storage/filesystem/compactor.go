@@ -261,10 +261,10 @@ func chunkCompactible(chunk string) (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	if !t.HasBirthTime() {
-		return 0, nil
+	age := time.Since(fi.ModTime())
+	if t.HasBirthTime() {
+		age = time.Since(t.BirthTime())
 	}
-	age := time.Since(t.BirthTime())
 	if age >= CompactChunkMaxAge {
 		return 2, nil
 	}
