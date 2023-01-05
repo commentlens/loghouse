@@ -262,6 +262,7 @@ func chunkCompactible(chunk string) (uint8, error) {
 		return 0, err
 	}
 	if !t.HasBirthTime() {
+		fmt.Println("no birth time")
 		return 0, nil
 	}
 	age := time.Since(t.BirthTime())
