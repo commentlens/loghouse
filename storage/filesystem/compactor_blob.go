@@ -13,7 +13,7 @@ const (
 	BlobLineMaxSize = 10 * 1024 * 1024
 )
 
-func readIndex(r io.Reader) ([]*compactIndex, error) {
+func readIndex(r io.Reader, opts *storage.ReadOptions) ([]*compactIndex, error) {
 	var indexList []*compactIndex
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -21,6 +21,9 @@ func readIndex(r io.Reader) ([]*compactIndex, error) {
 		err := json.Unmarshal(scanner.Bytes(), &index)
 		if err != nil {
 			return nil, err
+		}
+		if !matchIndex(&index, opts) {
+			continue
 		}
 		indexList = append(indexList, &index)
 	}
@@ -36,13 +39,8 @@ func readBlob(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(buf, BlobLineMaxSize)
 	for scanner.Scan() {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
 		var e storage.LogEntry
-		err := json.Unmarshal(scanner.Bytes(), &e)
+		err := e.UnmarshalJSON(scanner.Bytes())
 		if err != nil {
 			return err
 		}
@@ -50,6 +48,11 @@ func readBlob(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error
 			continue
 		}
 		opts.ResultFunc(&e)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 	}
 	return scanner.Err()
 }

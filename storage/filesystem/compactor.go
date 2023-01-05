@@ -52,21 +52,17 @@ type compactIndex struct {
 	Compression string
 }
 
-func filterIndex(indexList []*compactIndex, opts *storage.ReadOptions) ([]*compactIndex, error) {
-	var out []*compactIndex
-	for _, index := range indexList {
-		if !storage.MatchLabels(index.Labels, opts.Labels) {
-			continue
-		}
-		if !opts.Start.IsZero() && opts.Start.After(index.End) {
-			continue
-		}
-		if !opts.End.IsZero() && opts.End.Before(index.Start) {
-			continue
-		}
-		out = append(out, index)
+func matchIndex(index *compactIndex, opts *storage.ReadOptions) bool {
+	if !storage.MatchLabels(index.Labels, opts.Labels) {
+		return false
 	}
-	return out, nil
+	if !opts.Start.IsZero() && opts.Start.After(index.End) {
+		return false
+	}
+	if !opts.End.IsZero() && opts.End.Before(index.Start) {
+		return false
+	}
+	return true
 }
 
 type blobReader struct {
@@ -86,11 +82,7 @@ func (r *blobReader) Read(ctx context.Context, opts *storage.ReadOptions) error 
 			}
 			defer f.Close()
 
-			indexList, err := readIndex(f)
-			if err != nil {
-				return nil, err
-			}
-			return filterIndex(indexList, opts)
+			return readIndex(f, opts)
 		}()
 		if err != nil {
 			return err
