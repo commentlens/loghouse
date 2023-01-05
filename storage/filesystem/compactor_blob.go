@@ -18,7 +18,7 @@ func readIndex(r io.Reader) ([]*compactIndex, error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		var index compactIndex
-		err := json.Unmarshal([]byte(scanner.Text()), &index)
+		err := json.Unmarshal(scanner.Bytes(), &index)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +42,7 @@ func readBlob(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error
 		default:
 		}
 		var e storage.LogEntry
-		err := json.Unmarshal([]byte(scanner.Text()), &e)
+		err := json.Unmarshal(scanner.Bytes(), &e)
 		if err != nil {
 			return err
 		}

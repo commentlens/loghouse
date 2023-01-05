@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "net/http/pprof"
+
 	"github.com/commentlens/loghouse/api/loki"
 	"github.com/commentlens/loghouse/storage/filesystem"
 	"github.com/commentlens/loghouse/storage/label"
@@ -15,6 +17,8 @@ import (
 )
 
 func main() {
+	go http.ListenAndServe(":6060", nil)
+
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	log := logrus.StandardLogger()
 	log.Info("started")
