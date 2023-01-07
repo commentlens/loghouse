@@ -65,7 +65,8 @@ func (s *Store) LabelValues(key string) []string {
 	if !ok {
 		return nil
 	}
-	vals := append([]string{}, e.l...)
+	vals := make([]string, len(e.l))
+	copy(vals, e.l)
 	sort.Strings(vals)
 	return vals
 }
