@@ -11,19 +11,19 @@ import (
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/commentlens/loghouse/storage/chunkio"
 	"github.com/djherbis/times"
 	"github.com/oklog/ulid/v2"
 )
 
 const (
-	CompactDir              = "data/compact"
-	CompactChunkFile        = "chunk.loghouse.tmp"
-	CompactChunkMinAge      = 2 * time.Hour
-	CompactChunkMaxAge      = 8 * time.Hour
-	CompactChunkMinSize     = 1024 * 1024 * 25
-	CompactChunkMaxSize     = 1024 * 1024 * 100
-	CompactChunkCompression = "s2"
-	CompactChunkRemoveAge   = 31 * 24 * time.Hour
+	CompactDir            = "data/compact"
+	CompactChunkFile      = "chunk.loghouse.tmp"
+	CompactChunkMinAge    = 2 * time.Hour
+	CompactChunkMaxAge    = 8 * time.Hour
+	CompactChunkMinSize   = 1024 * 1024 * 25
+	CompactChunkMaxSize   = 1024 * 1024 * 100
+	CompactChunkRemoveAge = 31 * 24 * time.Hour
 )
 
 type compactor struct{}
@@ -75,7 +75,7 @@ func compactChunks(chunks []string) error {
 		}
 
 		buf := new(bytes.Buffer)
-		err = writeChunk(buf, es)
+		err = chunkio.Write(buf, es)
 		if err != nil {
 			return err
 		}

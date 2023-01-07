@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/commentlens/loghouse/storage/chunkio"
 )
 
 func findFiles(dir, name string) ([]string, error) {
@@ -47,7 +48,7 @@ func (r *reader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 			}
 			defer f.Close()
 
-			return readChunk(ctx, f, opts)
+			return chunkio.Read(ctx, f, opts)
 		}()
 		if err != nil {
 			return err

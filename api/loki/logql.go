@@ -118,7 +118,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			switch op {
 			case "=":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -126,7 +126,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case "!=":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -134,7 +134,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case "=~":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -146,7 +146,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case "!~":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -158,7 +158,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case ">=":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -170,7 +170,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case ">":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -182,7 +182,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case "<=":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}
@@ -194,7 +194,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 			case "<":
 				filters = append(filters, func(e *storage.LogEntry) bool {
-					v := gjson.GetBytes(e.Data, key)
+					v := gjson.Get(string(e.Data), key)
 					if !v.Exists() {
 						return false
 					}

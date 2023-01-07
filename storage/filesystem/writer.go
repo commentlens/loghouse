@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/commentlens/loghouse/storage/chunkio"
 )
 
 const (
@@ -18,24 +19,9 @@ func NewWriter() storage.Writer {
 
 type writer struct{}
 
-func logEntryDir(e *storage.LogEntry) (string, error) {
-	hashDir, err := storage.HashLabels(e.Labels)
-	if err != nil {
-		return "", err
-	}
-	dir := fmt.Sprintf("%s/%s", WriteDir, hashDir)
-	return dir, nil
-}
-
-func (w *writer) Write(es []*storage.LogEntry) error {
-	if len(es) == 0 {
-		return nil
-	}
-	dir, err := logEntryDir(es[0])
-	if err != nil {
-		return err
-	}
-	err = os.MkdirAll(dir, 0777)
+func (w *writer) write(hash string, es []*storage.LogEntry) error {
+	dir := fmt.Sprintf("%s/%s", WriteDir, hash)
+	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err
 	}
@@ -47,5 +33,23 @@ func (w *writer) Write(es []*storage.LogEntry) error {
 	}
 	defer f.Close()
 
-	return writeChunk(f, es)
+	return chunkio.Write(f, es)
+}
+
+func (w *writer) Write(es []*storage.LogEntry) error {
+	m := make(map[string][]*storage.LogEntry)
+	for _, e := range es {
+		h, err := storage.HashLabels(e.Labels)
+		if err != nil {
+			return err
+		}
+		m[h] = append(m[h], e)
+	}
+	for hash, es := range m {
+		err := w.write(hash, es)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -377,7 +377,7 @@ func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httpr
 				es = append(es, &storage.LogEntry{
 					Labels: stream.Stream,
 					Time:   time.Unix(0, int64(nsec)),
-					Data:   json.RawMessage(v[1]),
+					Data:   storage.LogEntryData(v[1]),
 				})
 			}
 			err := opts.StorageWriter.Write(es)

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/commentlens/loghouse/storage"
 	"github.com/stretchr/testify/require"
@@ -37,7 +36,7 @@ func markChunkCompactible() error {
 		if err != nil {
 			return nil
 		}
-		oldTime := time.Now().Add(-2 * CompactChunkMaxAge)
+		oldTime := now().Add(-2 * CompactChunkMaxAge)
 		return os.Chtimes(path, oldTime, oldTime)
 	})
 }
@@ -54,24 +53,24 @@ func TestCompactor(t *testing.T) {
 				"app":  "test",
 				"role": "test",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
+			Time: now(),
+			Data: `{"test":1}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test2",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
+			Time: now(),
+			Data: `{"test":2}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test3",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":3}`),
+			Time: now(),
+			Data: `{"test":3}`,
 		},
 	}
 	err := w.Write(es)
@@ -106,7 +105,7 @@ func TestCompactor(t *testing.T) {
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
-	require.Len(t, files, 2)
+	require.Len(t, files, 1)
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
@@ -122,7 +121,7 @@ func TestCompactor(t *testing.T) {
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
-	require.Len(t, files, 2)
+	require.Len(t, files, 1)
 
 	es2 := []*storage.LogEntry{
 		{
@@ -130,16 +129,16 @@ func TestCompactor(t *testing.T) {
 				"app":  "test",
 				"role": "test4",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":4}`),
+			Time: now(),
+			Data: `{"test":4}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test5",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":5}`),
+			Time: now(),
+			Data: `{"test":5}`,
 		},
 	}
 	err = w.Write(es2)
@@ -152,7 +151,7 @@ func TestCompactor(t *testing.T) {
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
-	require.Len(t, files, 2)
+	require.Len(t, files, 1)
 
 	chunks, err := findFiles(CompactDir, WriteChunkFile)
 	require.NoError(t, err)
@@ -194,24 +193,24 @@ func TestCompactReadWriter(t *testing.T) {
 				"app":  "test",
 				"role": "test",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
+			Time: now(),
+			Data: `{"test":1}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test2",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
+			Time: now(),
+			Data: `{"test":2}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test3",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":3}`),
+			Time: now(),
+			Data: `{"test":3}`,
 		},
 	}
 	err := w.Write(es)

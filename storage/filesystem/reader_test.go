@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func now() time.Time {
+	return time.Now().UTC().Truncate(time.Millisecond)
+}
+
 func TestReader(t *testing.T) {
 	os.RemoveAll(WriteDir)
 
@@ -21,16 +25,16 @@ func TestReader(t *testing.T) {
 				"app":  "test",
 				"role": "test2",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
+			Time: now(),
+			Data: `{"test":1}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test2",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":2}`),
+			Time: now(),
+			Data: `{"test":2}`,
 		},
 	}
 	err := w.Write(es)

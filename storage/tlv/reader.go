@@ -1,6 +1,7 @@
 package tlv
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
 )
@@ -10,12 +11,12 @@ type Reader interface {
 }
 
 type reader struct {
-	r   io.ReaderAt
+	r   io.Reader
 	off int64
 	b   []byte
 }
 
-func NewReader(r io.ReaderAt) Reader {
+func NewReader(r io.Reader) Reader {
 	return &reader{
 		r: r,
 		b: make([]byte, 8),
@@ -31,13 +32,30 @@ func (r *reader) Read() (uint64, *io.SectionReader, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	val := io.NewSectionReader(r.r, r.off, int64(l))
+	var val *io.SectionReader
+	if ra, ok := r.r.(io.ReaderAt); ok {
+		val = io.NewSectionReader(ra, r.off, int64(l))
+	} else {
+		b := make([]byte, l)
+		_, err := io.ReadFull(r.r, b)
+		if err != nil {
+			return 0, nil, err
+		}
+		val = io.NewSectionReader(bytes.NewReader(b), 0, int64(l))
+	}
 	r.off += int64(l)
 	return typ, val, nil
 }
 
+func (r *reader) read(b []byte) (int, error) {
+	if ra, ok := r.r.(io.ReaderAt); ok {
+		return ra.ReadAt(b, r.off)
+	}
+	return r.r.Read(b)
+}
+
 func (r *reader) readUint64() (uint64, error) {
-	_, err := r.r.ReadAt(r.b[:1], r.off)
+	_, err := r.read(r.b[:1])
 	if err != nil {
 		return 0, err
 	}
@@ -53,7 +71,7 @@ func (r *reader) readUint64() (uint64, error) {
 	}
 	b := r.b[:n]
 	if len(b) > 0 {
-		_, err := r.r.ReadAt(b, r.off)
+		_, err := r.read(b)
 		if err != nil {
 			return 0, err
 		}

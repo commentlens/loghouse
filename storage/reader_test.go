@@ -7,6 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func now() time.Time {
+	return time.Now().UTC().Truncate(time.Millisecond)
+}
+
 func TestMatchLogEntry(t *testing.T) {
 	es := []*LogEntry{
 		{
@@ -14,16 +18,16 @@ func TestMatchLogEntry(t *testing.T) {
 				"app":  "test",
 				"role": "test1",
 			},
-			Time: time.Now().UTC(),
-			Data: []byte(`{"test":1}`),
+			Time: now(),
+			Data: `{"test":1}`,
 		},
 		{
 			Labels: map[string]string{
 				"app":  "test",
 				"role": "test2",
 			},
-			Time: time.Now().UTC().Add(time.Hour),
-			Data: []byte(`{"test":2}`),
+			Time: now().Add(time.Hour),
+			Data: `{"test":2}`,
 		},
 	}
 	for _, test := range []struct {
@@ -78,8 +82,8 @@ func TestMatchLogEntry(t *testing.T) {
 			name: "match time",
 			readOptions: &ReadOptions{
 				Labels: map[string]string{},
-				Start:  time.Now().Add(-time.Hour),
-				End:    time.Now(),
+				Start:  now().Add(-time.Hour),
+				End:    now(),
 			},
 			want: []*LogEntry{es[0]},
 		},
@@ -87,8 +91,8 @@ func TestMatchLogEntry(t *testing.T) {
 			name: "mismatch time",
 			readOptions: &ReadOptions{
 				Labels: map[string]string{},
-				Start:  time.Now().Add(time.Hour),
-				End:    time.Now().Add(-time.Hour),
+				Start:  now().Add(time.Hour),
+				End:    now().Add(-time.Hour),
 			},
 		},
 	} {
