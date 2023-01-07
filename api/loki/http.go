@@ -115,16 +115,16 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			var values [][]interface{}
 			if start.Before(end) && step > 0 {
-				histogram := make([]uint64, end.Sub(start)/step+1)
-				var mu sync.Mutex
+				histogramSize := end.Sub(start)/step + 1
+				histogram := make([]uint64, histogramSize)
+				mu := make([]sync.Mutex, histogramSize)
 				err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
 					Start: start,
 					End:   end,
 					ResultFunc: func(e *storage.LogEntry) {
-						mu.Lock()
-						defer mu.Unlock()
-
 						i := e.Time.Sub(start) / step
+						mu[i].Lock()
+						defer mu[i].Unlock()
 						histogram[i] += 1
 					},
 				}, query.Get("query"))
