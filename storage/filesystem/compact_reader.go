@@ -21,9 +21,7 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	type readerTypeChunk string
-	type readerTypeIndex string
-	chIn := make(chan interface{})
+	chIn := make(chan string)
 	defer close(chIn)
 
 	for i := 0; i < CompactReaderConcurrency; i++ {
@@ -31,40 +29,26 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 		go func() {
 			defer wg.Done()
 
-			for t := range chIn {
-				var r storage.Reader
-				switch t := t.(type) {
-				case readerTypeChunk:
-					r = NewReader([]string{string(t)})
-				case readerTypeIndex:
-					r = newBlobReader([]string{string(t)})
-				}
-				r.Read(ctx, opts)
+			for chunk := range chIn {
+				NewReader([]string{chunk}).Read(ctx, opts)
 			}
 		}()
 	}
 
-	var readers []interface{}
-	indexFiles, err := findFiles(CompactDir, CompactIndexFile)
-	if err != nil {
-		return err
-	}
-	for _, indexFile := range indexFiles {
-		readers = append(readers, readerTypeIndex(indexFile))
-	}
-	chunks, err := findFiles(WriteDir, WriteChunkFile)
-	if err != nil {
-		return err
-	}
-	for _, chunk := range chunks {
-		readers = append(readers, readerTypeChunk(chunk))
+	var chunks []string
+	for _, dir := range []string{CompactDir, WriteDir} {
+		files, err := findFiles(dir, WriteChunkFile)
+		if err != nil {
+			return err
+		}
+		chunks = append(chunks, files...)
 	}
 
-	for _, rd := range readers {
+	for _, chunk := range chunks {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case chIn <- rd:
+		case chIn <- chunk:
 		}
 	}
 	return nil

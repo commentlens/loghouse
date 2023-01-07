@@ -154,12 +154,12 @@ func TestCompactor(t *testing.T) {
 	require.Len(t, dirs, 2)
 	require.Len(t, files, 2)
 
-	indexFiles, err := findFiles(CompactDir, CompactIndexFile)
+	chunks, err := findFiles(CompactDir, WriteChunkFile)
 	require.NoError(t, err)
-	br := newBlobReader(indexFiles)
+	r := NewReader(chunks)
 
 	var esReadNew []*storage.LogEntry
-	err = br.Read(context.Background(), &storage.ReadOptions{
+	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"role": "test5",
 		},
@@ -171,7 +171,7 @@ func TestCompactor(t *testing.T) {
 	require.Len(t, esReadNew, 0)
 
 	var esReadOld []*storage.LogEntry
-	err = br.Read(context.Background(), &storage.ReadOptions{
+	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},

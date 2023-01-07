@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -10,7 +9,7 @@ import (
 
 const (
 	WriteDir       = "data/incompact"
-	WriteChunkFile = "chunk.jsonl"
+	WriteChunkFile = "chunk.loghouse"
 )
 
 func NewWriter() storage.Writer {
@@ -28,14 +27,11 @@ func logEntryDir(e *storage.LogEntry) (string, error) {
 	return dir, nil
 }
 
-func (w *writer) write(e *storage.LogEntry) error {
-	var v struct{}
-	err := json.Unmarshal(e.Data, &v)
-	if err != nil {
-		return err
+func (w *writer) Write(es []*storage.LogEntry) error {
+	if len(es) == 0 {
+		return nil
 	}
-
-	dir, err := logEntryDir(e)
+	dir, err := logEntryDir(es[0])
 	if err != nil {
 		return err
 	}
@@ -51,15 +47,5 @@ func (w *writer) write(e *storage.LogEntry) error {
 	}
 	defer f.Close()
 
-	return writeBlob(f, []*storage.LogEntry{e})
-}
-
-func (w *writer) Write(es []*storage.LogEntry) error {
-	for _, e := range es {
-		err := w.write(e)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return writeChunk(f, es)
 }

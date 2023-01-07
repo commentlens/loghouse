@@ -1,10 +1,8 @@
 package filesystem
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -45,17 +43,5 @@ func TestWriter(t *testing.T) {
 
 		chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 		require.FileExists(t, chunkFile)
-
-		entryJSON, err := json.Marshal(e)
-		require.NoError(t, err)
-		chunkLines, err := os.ReadFile(chunkFile)
-		require.NoError(t, err)
-		var found bool
-		for _, line := range strings.Split(string(chunkLines), "\n") {
-			if line == string(entryJSON) {
-				found = true
-			}
-		}
-		require.True(t, found)
 	}
 }

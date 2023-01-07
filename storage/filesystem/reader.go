@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"context"
-	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -41,55 +40,14 @@ type reader struct {
 
 func (r *reader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 	for _, chunk := range r.Chunks {
-		ok, err := func() (bool, error) {
-			f, err := os.Open(chunk)
-			if err != nil {
-				return false, err
-			}
-			defer f.Close()
-
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-
-			var first *storage.LogEntry
-			err = readBlob(ctx, f, &storage.ReadOptions{
-				ResultFunc: func(e *storage.LogEntry) {
-					if first == nil {
-						first = e
-						cancel()
-					}
-				},
-			})
-			if err != nil && !errors.Is(err, context.Canceled) {
-				return false, err
-			}
-			if first == nil {
-				return false, nil
-			}
-			if !storage.MatchLabels(first.Labels, opts.Labels) {
-				return false, nil
-			}
-			if !opts.End.IsZero() && opts.End.Before(first.Time) {
-				return false, nil
-			}
-			return true, nil
-		}()
-		if err != nil {
-			return err
-		}
-		if !ok {
-			continue
-		}
-		err = func() error {
+		err := func() error {
 			f, err := os.Open(chunk)
 			if err != nil {
 				return err
 			}
 			defer f.Close()
 
-			optsNoLabel := *opts
-			optsNoLabel.Labels = nil
-			return readBlob(ctx, f, &optsNoLabel)
+			return readChunk(ctx, f, opts)
 		}()
 		if err != nil {
 			return err
