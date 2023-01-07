@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFilter(t *testing.T) {
+func TestMatchLogEntry(t *testing.T) {
 	es := []*LogEntry{
 		{
 			Labels: map[string]string{
@@ -93,8 +93,13 @@ func TestFilter(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Filter(es, test.readOptions)
-			require.NoError(t, err)
+			var got []*LogEntry
+			for _, e := range es {
+				if !MatchLogEntry(e, test.readOptions) {
+					continue
+				}
+				got = append(got, e)
+			}
 			require.Equal(t, test.want, got)
 		})
 	}

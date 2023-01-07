@@ -41,14 +41,3 @@ func MatchLogEntry(e *LogEntry, opts *ReadOptions) bool {
 	}
 	return true
 }
-
-func Filter(es []*LogEntry, opts *ReadOptions) ([]*LogEntry, error) {
-	var out []*LogEntry
-	for _, e := range es {
-		if !MatchLogEntry(e, opts) {
-			continue
-		}
-		out = append(out, e)
-	}
-	return out, nil
-}
