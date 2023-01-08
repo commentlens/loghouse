@@ -2,9 +2,9 @@ package storage
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 type Writer interface {
@@ -24,10 +24,6 @@ func HashLabels(labels map[string]string) (string, error) {
 		tuples = append(tuples, k, v)
 	}
 
-	b, err := json.Marshal(tuples)
-	if err != nil {
-		return "", err
-	}
-	digest := fmt.Sprintf("%x", sha256.Sum256(b))
+	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join(tuples, "_"))))
 	return digest, nil
 }

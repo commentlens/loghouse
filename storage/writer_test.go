@@ -16,14 +16,14 @@ func TestHashLabels(t *testing.T) {
 			labels: map[string]string{
 				"k1": "v1",
 			},
-			want: "d58ce7d3759b45503322e95d86f3bc7c93c1bfc71a6cc93042d84d33865b66ec",
+			want: "20bc39314ca03fe360c5cd4534dafc82710f8ddb995db794a90c9be456579f5f",
 		},
 		{
 			labels: map[string]string{
 				"k1": "v1",
 				"k2": "v2",
 			},
-			want: "a87bea96215f615ef8c874cf6c9d0b933e0f589af46fd99a49e6b09cc834136d",
+			want: "47072db50a7794444779f95b83af2a7d60d9f248ed84b2d87ed84c72536c23de",
 		},
 		{
 			labels: map[string]string{
@@ -31,7 +31,7 @@ func TestHashLabels(t *testing.T) {
 				"k2": "v2",
 				"k3": "v3",
 			},
-			want: "08b4c4b69688375c30d21667027f1525fa50e2904756eaf2a9d53a144bb20269",
+			want: "d34123fc0c3e59753f8cf9d1fd001f37be416c28c9b912a053decc500a32e090",
 		},
 	} {
 		t.Run(fmt.Sprintf("%v", test.labels), func(t *testing.T) {
