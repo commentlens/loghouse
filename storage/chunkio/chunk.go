@@ -26,7 +26,11 @@ const (
 	tlvString
 )
 
-func Read(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error {
+type ReadOptions struct {
+	StorageReadOptions storage.ReadOptions
+}
+
+func Read(ctx context.Context, r io.Reader, opts *ReadOptions) error {
 	tr := tlv.NewReader(r)
 	for {
 		typChunk, valChunk, err := tr.Read()
@@ -43,6 +47,7 @@ func Read(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error {
 		if err != nil {
 			return err
 		}
+		valChunk.Close()
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -51,7 +56,7 @@ func Read(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error {
 	}
 }
 
-func readChunk(ctx context.Context, val io.Reader, opts *storage.ReadOptions) error {
+func readChunk(ctx context.Context, val io.Reader, opts *ReadOptions) error {
 	tr := tlv.NewReader(val)
 	typHeader, valHeader, err := tr.Read()
 	if err != nil {
@@ -64,13 +69,13 @@ func readChunk(ctx context.Context, val io.Reader, opts *storage.ReadOptions) er
 	if err != nil {
 		return err
 	}
-	if !storage.MatchLabels(hdr.Labels, opts.Labels) {
+	if !storage.MatchLabels(hdr.Labels, opts.StorageReadOptions.Labels) {
 		return nil
 	}
-	if !opts.Start.IsZero() && opts.Start.After(hdr.End) {
+	if !opts.StorageReadOptions.Start.IsZero() && opts.StorageReadOptions.Start.After(hdr.End) {
 		return nil
 	}
-	if !opts.End.IsZero() && opts.End.Before(hdr.Start) {
+	if !opts.StorageReadOptions.End.IsZero() && opts.StorageReadOptions.End.Before(hdr.Start) {
 		return nil
 	}
 	typData, valData, err := tr.Read()
@@ -131,7 +136,7 @@ func decodeHeader(val io.Reader) (*chunkHeader, error) {
 	return &hdr, nil
 }
 
-func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *storage.ReadOptions) error {
+func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *ReadOptions) error {
 	switch hdr.Compression {
 	case "s2":
 		val = s2.NewReader(val)
@@ -168,12 +173,10 @@ func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *storag
 			Time:   t,
 			Data:   storage.LogEntryData(s),
 		}
-		if opts.FilterFunc != nil {
-			if !opts.FilterFunc(&e) {
-				continue
-			}
+		if !storage.MatchLogEntry(&e, &opts.StorageReadOptions) {
+			continue
 		}
-		opts.ResultFunc(&e)
+		opts.StorageReadOptions.ResultFunc(&e)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -183,25 +186,29 @@ func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *storag
 	return nil
 }
 
-func Write(w io.Writer, es []*storage.LogEntry, compress bool) error {
+type WriteOptions struct {
+	Compress bool
+}
+
+func Write(w io.Writer, es []*storage.LogEntry, opts *WriteOptions) error {
 	if len(es) == 0 {
 		return nil
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 
 	tw := tlv.NewWriter(w)
-	chunk, err := encodeChunk(es, compress)
+	chunk, err := encodeChunk(es, opts)
 	if err != nil {
 		return err
 	}
 	return tw.Write(tlvChunkContainer, chunk)
 }
 
-func encodeChunk(es []*storage.LogEntry, compress bool) ([]byte, error) {
+func encodeChunk(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	tw := tlv.NewWriter(buf)
-	header, err := encodeHeader(es, compress)
+	header, err := encodeHeader(es, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +216,7 @@ func encodeChunk(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := encodeData(es, compress)
+	data, err := encodeData(es, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +227,7 @@ func encodeChunk(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func encodeHeader(es []*storage.LogEntry, compress bool) ([]byte, error) {
+func encodeHeader(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	tw := tlv.NewWriter(buf)
@@ -248,7 +255,7 @@ func encodeHeader(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if compress {
+	if opts.Compress {
 		compression, err := encodeString("s2")
 		if err != nil {
 			return nil, err
@@ -261,10 +268,10 @@ func encodeHeader(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
+func encodeData(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	var w io.Writer = buf
-	if compress {
+	if opts.Compress {
 		w = s2.NewWriter(w)
 	}
 	tw := tlv.NewWriter(w)
@@ -341,27 +348,34 @@ func encodeMap(m map[string]string) ([]byte, error) {
 
 func decodeMap(val io.Reader) (map[string]string, error) {
 	r := tlv.NewReader(val)
-	var l []string
+	m := make(map[string]string)
 	for {
-		typ, val, err := r.Read()
+		typKey, valKey, err := r.Read()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, err
 		}
-		switch typ {
-		case tlvString:
-			s, err := decodeString(val)
-			if err != nil {
-				return nil, err
-			}
-			l = append(l, s)
+		if typKey != tlvString {
+			break
 		}
-	}
-	m := make(map[string]string)
-	for i := 0; i+1 < len(l); i += 2 {
-		m[l[i]] = l[i+1]
+		k, err := decodeString(valKey)
+		if err != nil {
+			return nil, err
+		}
+		typVal, valVal, err := r.Read()
+		if err != nil {
+			return nil, err
+		}
+		if typVal != tlvString {
+			break
+		}
+		v, err := decodeString(valVal)
+		if err != nil {
+			return nil, err
+		}
+		m[k] = v
 	}
 	return m, nil
 }

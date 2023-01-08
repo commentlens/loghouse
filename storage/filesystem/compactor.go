@@ -75,7 +75,9 @@ func compactChunks(chunks []string) error {
 		}
 
 		buf := new(bytes.Buffer)
-		err = chunkio.Write(buf, es, true)
+		err = chunkio.Write(buf, es, &chunkio.WriteOptions{
+			Compress: true,
+		})
 		if err != nil {
 			return err
 		}

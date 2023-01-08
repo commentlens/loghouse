@@ -1,10 +1,13 @@
 package filesystem
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/chunkio"
@@ -39,19 +42,72 @@ type reader struct {
 	Chunks []string
 }
 
+func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptions) error {
+	f, err := os.Open(chunk)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return chunkio.Read(ctx, bufio.NewReader(f), &chunkio.ReadOptions{
+		StorageReadOptions: *opts,
+	})
+}
+
+func (r *reader) dryRead(ctx context.Context, chunk string, opts *storage.ReadOptions) (bool, error) {
+	dryRunCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var first *storage.LogEntry
+	err := r.read(dryRunCtx, chunk, &storage.ReadOptions{
+		ResultFunc: func(e *storage.LogEntry) {
+			if first == nil {
+				first = e
+				cancel()
+			}
+		},
+	})
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			select {
+			case <-ctx.Done():
+				return false, err
+			default:
+			}
+		} else {
+			return false, err
+		}
+	}
+	if first == nil {
+		return false, nil
+	}
+	if !storage.MatchLabels(first.Labels, opts.Labels) {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (r *reader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 	for _, chunk := range r.Chunks {
-		err := func() error {
-			f, err := os.Open(chunk)
+		if strings.HasPrefix(chunk, CompactDir) {
+			err := r.read(ctx, chunk, opts)
 			if err != nil {
 				return err
 			}
-			defer f.Close()
-
-			return chunkio.Read(ctx, f, opts)
-		}()
-		if err != nil {
-			return err
+		} else {
+			ok, err := r.dryRead(ctx, chunk, opts)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				continue
+			}
+			optsNoLabels := *opts
+			optsNoLabels.Labels = nil
+			err = r.read(ctx, chunk, &optsNoLabels)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

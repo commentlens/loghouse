@@ -25,15 +25,16 @@ func (w *writer) write(hash string, es []*storage.LogEntry) error {
 	if err != nil {
 		return err
 	}
-	chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 
-	f, err := os.OpenFile(chunkFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s", dir, WriteChunkFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	return chunkio.Write(f, es, false)
+	return chunkio.Write(f, es, &chunkio.WriteOptions{
+		Compress: false,
+	})
 }
 
 func (w *writer) Write(es []*storage.LogEntry) error {
