@@ -51,8 +51,8 @@ func Read(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error {
 	}
 }
 
-func readChunk(ctx context.Context, r io.Reader, opts *storage.ReadOptions) error {
-	tr := tlv.NewReader(r)
+func readChunk(ctx context.Context, val io.Reader, opts *storage.ReadOptions) error {
+	tr := tlv.NewReader(val)
 	typHeader, valHeader, err := tr.Read()
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ type chunkHeader struct {
 	Compression string
 }
 
-func decodeHeader(val *io.SectionReader) (*chunkHeader, error) {
+func decodeHeader(val io.Reader) (*chunkHeader, error) {
 	var hdr chunkHeader
 	tr := tlv.NewReader(val)
 	for {
@@ -131,13 +131,12 @@ func decodeHeader(val *io.SectionReader) (*chunkHeader, error) {
 	return &hdr, nil
 }
 
-func readData(ctx context.Context, hdr *chunkHeader, val *io.SectionReader, opts *storage.ReadOptions) error {
-	var r io.Reader = val
+func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *storage.ReadOptions) error {
 	switch hdr.Compression {
 	case "s2":
-		r = s2.NewReader(r)
+		val = s2.NewReader(val)
 	}
-	tr := tlv.NewReader(r)
+	tr := tlv.NewReader(val)
 	for {
 		typTime, valTime, err := tr.Read()
 		if err != nil {
@@ -293,7 +292,7 @@ func encodeString(s string) ([]byte, error) {
 	return []byte(s), nil
 }
 
-func decodeString(val *io.SectionReader) (string, error) {
+func decodeString(val io.Reader) (string, error) {
 	b, err := io.ReadAll(val)
 	if err != nil {
 		return "", err
@@ -307,7 +306,7 @@ func encodeTime(t time.Time) ([]byte, error) {
 	return b, nil
 }
 
-func decodeTime(val *io.SectionReader) (time.Time, error) {
+func decodeTime(val io.Reader) (time.Time, error) {
 	b, err := io.ReadAll(val)
 	if err != nil {
 		return time.Time{}, err
@@ -333,7 +332,7 @@ func encodeMap(m map[string]string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func decodeMap(val *io.SectionReader) (map[string]string, error) {
+func decodeMap(val io.Reader) (map[string]string, error) {
 	r := tlv.NewReader(val)
 	var l []string
 	for {
