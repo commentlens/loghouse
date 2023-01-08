@@ -33,7 +33,7 @@ func (w *writer) write(hash string, es []*storage.LogEntry) error {
 	}
 	defer f.Close()
 
-	return chunkio.Write(f, es)
+	return chunkio.Write(f, es, false)
 }
 
 func (w *writer) Write(es []*storage.LogEntry) error {

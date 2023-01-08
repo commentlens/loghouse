@@ -183,25 +183,25 @@ func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *storag
 	return nil
 }
 
-func Write(w io.Writer, es []*storage.LogEntry) error {
+func Write(w io.Writer, es []*storage.LogEntry, compress bool) error {
 	if len(es) == 0 {
 		return nil
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 
 	tw := tlv.NewWriter(w)
-	chunk, err := encodeChunk(es)
+	chunk, err := encodeChunk(es, compress)
 	if err != nil {
 		return err
 	}
 	return tw.Write(tlvChunkContainer, chunk)
 }
 
-func encodeChunk(es []*storage.LogEntry) ([]byte, error) {
+func encodeChunk(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	tw := tlv.NewWriter(buf)
-	header, err := encodeHeader(es)
+	header, err := encodeHeader(es, compress)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func encodeChunk(es []*storage.LogEntry) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := encodeData(es)
+	data, err := encodeData(es, compress)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func encodeChunk(es []*storage.LogEntry) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func encodeHeader(es []*storage.LogEntry) ([]byte, error) {
+func encodeHeader(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	tw := tlv.NewWriter(buf)
@@ -248,21 +248,26 @@ func encodeHeader(es []*storage.LogEntry) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	compression, err := encodeString("s2")
-	if err != nil {
-		return nil, err
-	}
-	err = tw.Write(tlvCompression, compression)
-	if err != nil {
-		return nil, err
+	if compress {
+		compression, err := encodeString("s2")
+		if err != nil {
+			return nil, err
+		}
+		err = tw.Write(tlvCompression, compression)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return buf.Bytes(), nil
 }
 
-func encodeData(es []*storage.LogEntry) ([]byte, error) {
+func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	buf := new(bytes.Buffer)
-	compress := s2.NewWriter(buf)
-	tw := tlv.NewWriter(compress)
+	var w io.Writer = buf
+	if compress {
+		w = s2.NewWriter(w)
+	}
+	tw := tlv.NewWriter(w)
 	for _, e := range es {
 		t, err := encodeTime(e.Time)
 		if err != nil {
@@ -281,9 +286,11 @@ func encodeData(es []*storage.LogEntry) ([]byte, error) {
 			return nil, err
 		}
 	}
-	err := compress.Close()
-	if err != nil {
-		return nil, err
+	if wc, ok := w.(io.WriteCloser); ok {
+		err := wc.Close()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return buf.Bytes(), nil
 }
