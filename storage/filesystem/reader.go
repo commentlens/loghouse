@@ -13,6 +13,10 @@ import (
 	"github.com/commentlens/loghouse/storage/chunkio"
 )
 
+const (
+	readerBufferSize = 1024 * 1024
+)
+
 func findFiles(dir, name string) ([]string, error) {
 	var paths []string
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -49,7 +53,7 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 	}
 	defer f.Close()
 
-	return chunkio.Read(ctx, bufio.NewReader(f), &chunkio.ReadOptions{
+	return chunkio.Read(ctx, bufio.NewReaderSize(f, readerBufferSize), &chunkio.ReadOptions{
 		StorageReadOptions: *opts,
 	})
 }

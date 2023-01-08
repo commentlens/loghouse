@@ -22,6 +22,7 @@ import (
 const (
 	ReadLimit    = 100
 	ReadRange    = time.Hour
+	ReadStep     = 15 * time.Minute
 	TailInterval = 15 * time.Second
 	TailDelay    = 5 * time.Second
 )
@@ -104,40 +105,45 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil {
 			return nil, err
 		}
+		readStep := ReadStep
+		if step := query.Get("step"); step != "" {
+			d, err := time.ParseDuration(step)
+			if err != nil {
+				return nil, err
+			}
+			readStep = d
+		}
+		if !(start.Before(end) && readStep > 0) {
+			return nil, nil
+		}
 		isHistogram, err := logqlIsHistogram(query.Get("query"))
 		if err != nil {
 			return nil, err
 		}
 		if isHistogram {
-			step, err := time.ParseDuration(query.Get("step"))
+			var values [][]interface{}
+			histogramSize := end.Sub(start)/readStep + 1
+			histogram := make([]uint64, histogramSize)
+			mu := make([]sync.Mutex, histogramSize)
+			err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
+				Start: start,
+				End:   end,
+				ResultFunc: func(e *storage.LogEntry) {
+					i := e.Time.Sub(start) / readStep
+					mu[i].Lock()
+					defer mu[i].Unlock()
+					histogram[i] += 1
+				},
+			}, query.Get("query"))
 			if err != nil {
 				return nil, err
 			}
-			var values [][]interface{}
-			if start.Before(end) && step > 0 {
-				histogramSize := end.Sub(start)/step + 1
-				histogram := make([]uint64, histogramSize)
-				mu := make([]sync.Mutex, histogramSize)
-				err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
-					Start: start,
-					End:   end,
-					ResultFunc: func(e *storage.LogEntry) {
-						i := e.Time.Sub(start) / step
-						mu[i].Lock()
-						defer mu[i].Unlock()
-						histogram[i] += 1
-					},
-				}, query.Get("query"))
-				if err != nil {
-					return nil, err
-				}
-				for i, count := range histogram {
-					if count > 0 {
-						values = append(values, []interface{}{
-							start.Add(time.Duration(i) * step).Unix(),
-							fmt.Sprint(count),
-						})
-					}
+			for i, count := range histogram {
+				if count > 0 {
+					values = append(values, []interface{}{
+						start.Add(time.Duration(i) * readStep).Unix(),
+						fmt.Sprint(count),
+					})
 				}
 			}
 			return []*Matrix{{
@@ -168,26 +174,9 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 				},
 			}, query.Get("query"))
 		}
-		if reverse {
-			for t := end; t.After(start); t = t.Add(-time.Hour) {
-				err := scan(t.Add(-time.Hour), t)
-				if err != nil {
-					if errors.Is(err, context.Canceled) {
-						break
-					}
-					return nil, err
-				}
-			}
-		} else {
-			for t := start; t.Before(end); t = t.Add(time.Hour) {
-				err := scan(t, t.Add(time.Hour))
-				if err != nil {
-					if errors.Is(err, context.Canceled) {
-						break
-					}
-					return nil, err
-				}
-			}
+		err = scan(start, end)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return nil, err
 		}
 		return createStreams(s.Get())
 	}()

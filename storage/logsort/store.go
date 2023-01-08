@@ -48,6 +48,19 @@ func (s *Store) Add(e *storage.LogEntry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if len(s.es) > 0 && uint64(len(s.es)) >= s.limit {
+		x := s.es[0]
+		if s.reverse {
+			if e.Time.Before(x.Time) {
+				return
+			}
+		} else {
+			if e.Time.After(x.Time) {
+				return
+			}
+		}
+	}
+
 	heap.Push(s, e)
 	for uint64(len(s.es)) > s.limit {
 		heap.Pop(s)
