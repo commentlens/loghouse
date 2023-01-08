@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/label"
+	"github.com/commentlens/loghouse/storage/logsort"
 	"github.com/julienschmidt/httprouter"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -152,31 +152,44 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			}
 			readLimit = n
 		}
-		var es []*storage.LogEntry
-		var mu sync.Mutex
-		err = logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
-			Start: start,
-			End:   end,
-			ResultFunc: func(e *storage.LogEntry) {
-				mu.Lock()
-				defer mu.Unlock()
-
-				if uint64(len(es)) < readLimit {
-					es = append(es, e)
-				} else {
+		reverse := query.Get("direction") == "backward"
+		s := logsort.NewStore(readLimit, reverse)
+		scan := func(start, end time.Time) error {
+			defer func() {
+				if s.IsFull() {
 					cancel()
 				}
-			},
-		}, query.Get("query"))
-		if err != nil && !errors.Is(err, context.Canceled) {
-			return nil, err
+			}()
+			return logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
+				Start: start,
+				End:   end,
+				ResultFunc: func(e *storage.LogEntry) {
+					s.Add(e)
+				},
+			}, query.Get("query"))
 		}
-		if query.Get("direction") == "backward" {
-			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.After(es[j].Time) })
+		if reverse {
+			for t := end; t.After(start); t = t.Add(-time.Hour) {
+				err := scan(t.Add(-time.Hour), t)
+				if err != nil {
+					if errors.Is(err, context.Canceled) {
+						break
+					}
+					return nil, err
+				}
+			}
 		} else {
-			sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
+			for t := start; t.Before(end); t = t.Add(time.Hour) {
+				err := scan(t, t.Add(time.Hour))
+				if err != nil {
+					if errors.Is(err, context.Canceled) {
+						break
+					}
+					return nil, err
+				}
+			}
 		}
-		return createStreams(es)
+		return createStreams(s.Get())
 	}()
 	var data QueryResponseData
 	switch result := result.(type) {
