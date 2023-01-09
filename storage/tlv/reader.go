@@ -21,15 +21,29 @@ func NewReader(r io.Reader) Reader {
 	}
 }
 
-type valuer struct {
-	r io.Reader
+type Valuer struct {
+	r *io.LimitedReader
 }
 
-func (v *valuer) Read(b []byte) (int, error) {
+type peeker interface {
+	Peek(int) ([]byte, error)
+}
+
+func (v *Valuer) Read(b []byte) (int, error) {
 	return v.r.Read(b)
 }
 
-func (v *valuer) Close() error {
+func (v *Valuer) Peek(n int) ([]byte, error) {
+	return v.r.R.(peeker).Peek(n)
+}
+
+func (v *Valuer) ReadAll() ([]byte, error) {
+	defer v.Close()
+
+	return v.Peek(int(v.r.N))
+}
+
+func (v *Valuer) Close() error {
 	_, err := io.Copy(io.Discard, v.r)
 	return err
 }
@@ -43,7 +57,7 @@ func (r *reader) Read() (uint64, io.ReadCloser, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	val := &valuer{r: io.LimitReader(r.r, int64(l))}
+	val := &Valuer{r: &io.LimitedReader{R: r.r, N: int64(l)}}
 	return typ, val, nil
 }
 

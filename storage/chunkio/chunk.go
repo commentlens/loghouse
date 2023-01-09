@@ -1,6 +1,7 @@
 package chunkio
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/binary"
@@ -139,7 +140,7 @@ func decodeHeader(val io.Reader) (*chunkHeader, error) {
 func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *ReadOptions) error {
 	switch hdr.Compression {
 	case "s2":
-		val = s2.NewReader(val)
+		val = bufio.NewReader(s2.NewReader(val))
 	}
 	tr := tlv.NewReader(val)
 	for {
@@ -302,12 +303,16 @@ func encodeData(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func readAll(val io.Reader) ([]byte, error) {
+	return val.(*tlv.Valuer).ReadAll()
+}
+
 func encodeString(s string) ([]byte, error) {
 	return []byte(s), nil
 }
 
 func decodeString(val io.Reader) (string, error) {
-	b, err := io.ReadAll(val)
+	b, err := readAll(val)
 	if err != nil {
 		return "", err
 	}
@@ -321,7 +326,7 @@ func encodeTime(t time.Time) ([]byte, error) {
 }
 
 func decodeTime(val io.Reader) (time.Time, error) {
-	b, err := io.ReadAll(val)
+	b, err := readAll(val)
 	if err != nil {
 		return time.Time{}, err
 	}
