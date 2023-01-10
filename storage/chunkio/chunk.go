@@ -27,6 +27,14 @@ const (
 	tlvString
 )
 
+const (
+	ReaderBufferSize = 1024 * 1024 * 10
+)
+
+var (
+	ErrUnexpectedTLVType = errors.New("unexpected tlv type")
+)
+
 type ReadOptions struct {
 	StorageReadOptions storage.ReadOptions
 }
@@ -42,7 +50,7 @@ func Read(ctx context.Context, r io.Reader, opts *ReadOptions) error {
 			return err
 		}
 		if typChunk != tlvChunkContainer {
-			continue
+			return ErrUnexpectedTLVType
 		}
 		err = readChunk(ctx, valChunk, opts)
 		if err != nil {
@@ -64,7 +72,7 @@ func readChunk(ctx context.Context, val io.Reader, opts *ReadOptions) error {
 		return err
 	}
 	if typHeader != tlvChunkHeader {
-		return nil
+		return ErrUnexpectedTLVType
 	}
 	hdr, err := decodeHeader(valHeader)
 	if err != nil {
@@ -84,7 +92,7 @@ func readChunk(ctx context.Context, val io.Reader, opts *ReadOptions) error {
 		return err
 	}
 	if typData != tlvChunkData {
-		return nil
+		return ErrUnexpectedTLVType
 	}
 	return readData(ctx, hdr, valData, opts)
 }
@@ -132,6 +140,8 @@ func decodeHeader(val io.Reader) (*chunkHeader, error) {
 				return nil, err
 			}
 			hdr.Compression = s
+		default:
+			return nil, ErrUnexpectedTLVType
 		}
 	}
 	return &hdr, nil
@@ -140,7 +150,7 @@ func decodeHeader(val io.Reader) (*chunkHeader, error) {
 func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *ReadOptions) error {
 	switch hdr.Compression {
 	case "s2":
-		val = bufio.NewReader(s2.NewReader(val))
+		val = bufio.NewReaderSize(s2.NewReader(val), ReaderBufferSize)
 	}
 	tr := tlv.NewReader(val)
 	for {
@@ -152,7 +162,7 @@ func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *ReadOp
 			return err
 		}
 		if typTime != tlvTime {
-			return nil
+			return ErrUnexpectedTLVType
 		}
 		t, err := decodeTime(valTime)
 		if err != nil {
@@ -163,7 +173,7 @@ func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *ReadOp
 			return err
 		}
 		if typStr != tlvString {
-			return nil
+			return ErrUnexpectedTLVType
 		}
 		s, err := decodeString(valStr)
 		if err != nil {
@@ -363,7 +373,7 @@ func decodeMap(val io.Reader) (map[string]string, error) {
 			return nil, err
 		}
 		if typKey != tlvString {
-			break
+			return nil, ErrUnexpectedTLVType
 		}
 		k, err := decodeString(valKey)
 		if err != nil {
@@ -374,7 +384,7 @@ func decodeMap(val io.Reader) (map[string]string, error) {
 			return nil, err
 		}
 		if typVal != tlvString {
-			break
+			return nil, ErrUnexpectedTLVType
 		}
 		v, err := decodeString(valVal)
 		if err != nil {
