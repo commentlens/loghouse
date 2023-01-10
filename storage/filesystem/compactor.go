@@ -21,8 +21,8 @@ const (
 	CompactChunkFile      = "chunk.loghouse.tmp"
 	CompactChunkMinAge    = 2 * time.Hour
 	CompactChunkMaxAge    = 8 * time.Hour
-	CompactChunkMinSize   = 1024 * 1024 * 25
-	CompactChunkMaxSize   = 1024 * 1024 * 100
+	CompactChunkMinSize   = 1024 * 1024 * 100
+	CompactChunkMaxSize   = 1024 * 1024 * 400
 	CompactChunkRemoveAge = 31 * 24 * time.Hour
 )
 
