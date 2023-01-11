@@ -219,7 +219,16 @@ func encodeChunk(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	tw := tlv.NewWriter(buf)
-	header, err := encodeHeader(es, opts)
+	compression := ""
+	if opts.Compress {
+		compression = "s2"
+	}
+	header, err := encodeHeader(&chunkHeader{
+		Labels:      es[0].Labels,
+		Start:       es[0].Time,
+		End:         es[len(es)-1].Time,
+		Compression: compression,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -238,35 +247,41 @@ func encodeChunk(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func encodeHeader(es []*storage.LogEntry, opts *WriteOptions) ([]byte, error) {
+func encodeHeader(hdr *chunkHeader) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	tw := tlv.NewWriter(buf)
-	labels, err := encodeMap(es[0].Labels)
-	if err != nil {
-		return nil, err
+	if len(hdr.Labels) != 0 {
+		labels, err := encodeMap(hdr.Labels)
+		if err != nil {
+			return nil, err
+		}
+		err = tw.Write(tlvLabels, labels)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = tw.Write(tlvLabels, labels)
-	if err != nil {
-		return nil, err
+	if !hdr.Start.IsZero() {
+		start, err := encodeTime(hdr.Start)
+		if err != nil {
+			return nil, err
+		}
+		err = tw.Write(tlvStart, start)
+		if err != nil {
+			return nil, err
+		}
 	}
-	start, err := encodeTime(es[0].Time)
-	if err != nil {
-		return nil, err
+	if !hdr.End.IsZero() {
+		end, err := encodeTime(hdr.End)
+		if err != nil {
+			return nil, err
+		}
+		err = tw.Write(tlvEnd, end)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = tw.Write(tlvStart, start)
-	if err != nil {
-		return nil, err
-	}
-	end, err := encodeTime(es[len(es)-1].Time)
-	if err != nil {
-		return nil, err
-	}
-	err = tw.Write(tlvEnd, end)
-	if err != nil {
-		return nil, err
-	}
-	if opts.Compress {
+	if hdr.Compression != "" {
 		compression, err := encodeString("s2")
 		if err != nil {
 			return nil, err
