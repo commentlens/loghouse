@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -21,20 +22,38 @@ type writer struct{}
 
 func (w *writer) write(hash string, es []*storage.LogEntry) error {
 	dir := fmt.Sprintf("%s/%s", WriteDir, hash)
+	chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err
 	}
+	err = func() error {
+		f, err := os.OpenFile(chunkFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s", dir, WriteChunkFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+		return chunkio.WriteLabels(f, es[0].Labels)
+	}()
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	err = func() error {
+		f, err := os.OpenFile(chunkFile, os.O_WRONLY|os.O_APPEND, 0777)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		return chunkio.Write(f, es, &chunkio.WriteOptions{
+			DataOnly: true,
+		})
+	}()
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
-	return chunkio.Write(f, es, &chunkio.WriteOptions{
-		Compress: false,
-	})
+	return nil
 }
 
 func (w *writer) Write(es []*storage.LogEntry) error {

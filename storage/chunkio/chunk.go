@@ -42,27 +42,36 @@ type ReadOptions struct {
 func Read(ctx context.Context, r io.Reader, opts *ReadOptions) error {
 	tr := tlv.NewReader(r)
 	for {
-		typChunk, valChunk, err := tr.Read()
+		typ, val, err := tr.Read()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil
+				break
 			}
 			return err
 		}
-		if typChunk != tlvChunkContainer {
+		switch typ {
+		case tlvChunkContainer:
+			err := readChunk(ctx, val, opts)
+			if err != nil {
+				return err
+			}
+			val.Close()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+		case tlvLabels:
+			labels, err := decodeMap(val)
+			if err != nil {
+				return err
+			}
+			return readData(ctx, &chunkHeader{Labels: labels}, r, opts)
+		default:
 			return ErrUnexpectedTLVType
 		}
-		err = readChunk(ctx, valChunk, opts)
-		if err != nil {
-			return err
-		}
-		valChunk.Close()
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
 	}
+	return nil
 }
 
 func readChunk(ctx context.Context, val io.Reader, opts *ReadOptions) error {
@@ -197,8 +206,18 @@ func readData(ctx context.Context, hdr *chunkHeader, val io.Reader, opts *ReadOp
 	return nil
 }
 
+func WriteLabels(w io.Writer, labels map[string]string) error {
+	b, err := encodeMap(labels)
+	if err != nil {
+		return err
+	}
+	tw := tlv.NewWriter(w)
+	return tw.Write(tlvLabels, b)
+}
+
 type WriteOptions struct {
 	Compress bool
+	DataOnly bool
 }
 
 func Write(w io.Writer, es []*storage.LogEntry, opts *WriteOptions) error {
@@ -207,6 +226,17 @@ func Write(w io.Writer, es []*storage.LogEntry, opts *WriteOptions) error {
 	}
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 
+	if opts.DataOnly {
+		data, err := encodeData(es, opts)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(data)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	tw := tlv.NewWriter(w)
 	chunk, err := encodeChunk(es, opts)
 	if err != nil {

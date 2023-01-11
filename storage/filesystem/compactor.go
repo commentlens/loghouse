@@ -86,7 +86,7 @@ func compactChunks(chunks []string) error {
 			if err != nil {
 				return err
 			}
-			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, chunkID, WriteChunkFile), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, chunkID, WriteChunkFile), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
 			if err != nil {
 				return err
 			}

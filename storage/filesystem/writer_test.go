@@ -44,4 +44,7 @@ func TestWriter(t *testing.T) {
 		chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 		require.FileExists(t, chunkFile)
 	}
+
+	err = w.Write(es)
+	require.NoError(t, err)
 }
