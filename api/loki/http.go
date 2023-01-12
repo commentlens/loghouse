@@ -20,9 +20,11 @@ import (
 )
 
 const (
-	ReadLimit    = 100
-	ReadRange    = time.Hour
-	ReadStep     = 15 * time.Minute
+	ReadLimit       = 100
+	ReadRange       = time.Hour
+	ReadStep        = 15 * time.Minute
+	ReadConcurrency = 100
+
 	TailInterval = 15 * time.Second
 	TailDelay    = 5 * time.Second
 )
@@ -124,7 +126,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			histogramSize := end.Sub(start)/readStep + 1
 			histogram := make([]uint64, histogramSize)
 			mu := make([]sync.Mutex, histogramSize)
-			err := logqlRead(ctx, filesystem.NewCompactReader(100, false), &storage.ReadOptions{
+			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e *storage.LogEntry) {
@@ -159,11 +161,15 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		}
 		reverse := query.Get("direction") == "backward"
 		var es []*storage.LogEntry
+		var mu sync.Mutex
 		scan := func(start, end time.Time) error {
-			return logqlRead(ctx, filesystem.NewCompactReader(1, reverse), &storage.ReadOptions{
+			return logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, reverse), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e *storage.LogEntry) {
+					mu.Lock()
+					defer mu.Unlock()
+
 					if uint64(len(es)) < readLimit {
 						es = append(es, e)
 					} else {
@@ -264,10 +270,13 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 
 		for {
 			var es []*storage.LogEntry
-			err := logqlRead(ctx, filesystem.NewCompactReader(1, false), &storage.ReadOptions{
+			var mu sync.Mutex
+			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e *storage.LogEntry) {
+					mu.Lock()
+					defer mu.Unlock()
 					es = append(es, e)
 				},
 			}, query.Get("query"))
