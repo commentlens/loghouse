@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
@@ -188,7 +187,7 @@ func swapChunk() error {
 	}
 	for _, chunks := range swappable {
 		for _, chunk := range chunks {
-			err := os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactTmpFile))
+			err := os.Rename(chunk, fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactTmpFile))
 			if err != nil {
 				return err
 			}
@@ -198,8 +197,7 @@ func swapChunk() error {
 }
 
 func removeEmptyDir(dir string, after time.Duration) error {
-	var paths []string
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -217,26 +215,19 @@ func removeEmptyDir(dir string, after time.Duration) error {
 		if time.Since(mtime) < after {
 			return nil
 		}
-		paths = append(paths, path)
+		files, err := os.ReadDir(path)
+		if err != nil {
+			return err
+		}
+		if len(files) > 1 {
+			return nil
+		}
+		if len(files) == 1 && files[0].Name() != CompactHeaderFile {
+			return nil
+		}
+		os.RemoveAll(path)
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	for i := len(paths) - 1; i >= 0; i-- {
-		files, err := os.ReadDir(paths[i])
-		if err != nil {
-			return err
-		}
-		if len(files) > 0 {
-			continue
-		}
-		err = os.RemoveAll(paths[i])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func removeOldChunk(dir string, after time.Duration) error {

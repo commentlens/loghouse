@@ -23,10 +23,10 @@ func MatchHeader(hdr *Header, opts *storage.ReadOptions) bool {
 	if !storage.MatchLabels(hdr.Labels, opts.Labels) {
 		return false
 	}
-	if !opts.Start.IsZero() && opts.Start.After(hdr.End) {
+	if !opts.Start.IsZero() && !hdr.End.IsZero() && opts.Start.After(hdr.End) {
 		return false
 	}
-	if !opts.End.IsZero() && opts.End.Before(hdr.Start) {
+	if !opts.End.IsZero() && !hdr.Start.IsZero() && opts.End.Before(hdr.Start) {
 		return false
 	}
 	return true

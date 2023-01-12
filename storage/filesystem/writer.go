@@ -22,13 +22,12 @@ type writer struct{}
 
 func (w *writer) write(hash string, es []*storage.LogEntry) error {
 	dir := fmt.Sprintf("%s/%s", WriteDir, hash)
-	chunkFile := fmt.Sprintf("%s/%s", dir, WriteChunkFile)
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err
 	}
 	err = func() error {
-		f, err := os.OpenFile(chunkFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
+		f, err := os.OpenFile(fmt.Sprintf("%s/%s", dir, CompactHeaderFile), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
 		if err != nil {
 			return err
 		}
@@ -42,7 +41,7 @@ func (w *writer) write(hash string, es []*storage.LogEntry) error {
 		return err
 	}
 	err = func() error {
-		f, err := os.OpenFile(chunkFile, os.O_WRONLY|os.O_APPEND, 0777)
+		f, err := os.OpenFile(fmt.Sprintf("%s/%s", dir, WriteChunkFile), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
 		if err != nil {
 			return err
 		}
