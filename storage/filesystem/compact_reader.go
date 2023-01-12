@@ -7,15 +7,17 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
-const (
-	compactReaderConcurrency = 100
-)
-
-func NewCompactReader() storage.Reader {
-	return &compactReader{}
+func NewCompactReader(readerCount int, reverse bool) storage.Reader {
+	return &compactReader{
+		readerCount: readerCount,
+		reverse:     reverse,
+	}
 }
 
-type compactReader struct{}
+type compactReader struct {
+	readerCount int
+	reverse     bool
+}
 
 func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 	var wg sync.WaitGroup
@@ -24,7 +26,7 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 	chIn := make(chan string)
 	defer close(chIn)
 
-	for i := 0; i < compactReaderConcurrency; i++ {
+	for i := 0; i < r.readerCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -43,7 +45,9 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 		}
 		chunks = append(chunks, files...)
 	}
-
+	if r.reverse {
+		reverseStrings(chunks)
+	}
 	for _, chunk := range chunks {
 		select {
 		case <-ctx.Done():
@@ -52,4 +56,11 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 		}
 	}
 	return nil
+}
+
+func reverseStrings(ss []string) {
+	last := len(ss) - 1
+	for i := 0; i < len(ss)/2; i++ {
+		ss[i], ss[last-i] = ss[last-i], ss[i]
+	}
 }

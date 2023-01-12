@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"github.com/commentlens/loghouse/storage"
@@ -216,8 +215,7 @@ func TestCompactReadWriter(t *testing.T) {
 	err := w.Write(es)
 	require.NoError(t, err)
 
-	r := NewCompactReader()
-	var mu sync.Mutex
+	r := NewCompactReader(1, false)
 
 	var esReadBefore []*storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
@@ -225,9 +223,6 @@ func TestCompactReadWriter(t *testing.T) {
 			"app": "test",
 		},
 		ResultFunc: func(e *storage.LogEntry) {
-			mu.Lock()
-			defer mu.Unlock()
-
 			esReadBefore = append(esReadBefore, e)
 		},
 	})
@@ -250,9 +245,6 @@ func TestCompactReadWriter(t *testing.T) {
 			"app": "test",
 		},
 		ResultFunc: func(e *storage.LogEntry) {
-			mu.Lock()
-			defer mu.Unlock()
-
 			esReadAfter = append(esReadAfter, e)
 		},
 	})

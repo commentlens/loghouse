@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/commentlens/loghouse/storage/filesystem"
 	"github.com/commentlens/loghouse/storage/label"
-	"github.com/commentlens/loghouse/storage/logsort"
 	"github.com/julienschmidt/httprouter"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -28,7 +28,6 @@ const (
 )
 
 type ServerOptions struct {
-	StorageReader storage.Reader
 	StorageWriter storage.Writer
 	LabelStore    *label.Store
 }
@@ -125,7 +124,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			histogramSize := end.Sub(start)/readStep + 1
 			histogram := make([]uint64, histogramSize)
 			mu := make([]sync.Mutex, histogramSize)
-			err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
+			err := logqlRead(ctx, filesystem.NewCompactReader(100, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e *storage.LogEntry) {
@@ -159,18 +158,17 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			readLimit = n
 		}
 		reverse := query.Get("direction") == "backward"
-		s := logsort.NewStore(readLimit, reverse)
+		var es []*storage.LogEntry
 		scan := func(start, end time.Time) error {
-			defer func() {
-				if s.IsFull() {
-					cancel()
-				}
-			}()
-			return logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
+			return logqlRead(ctx, filesystem.NewCompactReader(1, reverse), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e *storage.LogEntry) {
-					s.Add(e)
+					if uint64(len(es)) < readLimit {
+						es = append(es, e)
+					} else {
+						cancel()
+					}
 				},
 			}, query.Get("query"))
 		}
@@ -178,7 +176,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		if err != nil && !errors.Is(err, context.Canceled) {
 			return nil, err
 		}
-		return createStreams(s.Get())
+		return createStreams(es)
 	}()
 	var data QueryResponseData
 	switch result := result.(type) {
@@ -266,14 +264,10 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 
 		for {
 			var es []*storage.LogEntry
-			var mu sync.Mutex
-			err := logqlRead(ctx, opts.StorageReader, &storage.ReadOptions{
+			err := logqlRead(ctx, filesystem.NewCompactReader(1, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e *storage.LogEntry) {
-					mu.Lock()
-					defer mu.Unlock()
-
 					es = append(es, e)
 				},
 			}, query.Get("query"))

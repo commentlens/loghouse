@@ -32,10 +32,8 @@ func main() {
 		<-c
 	}()
 
-	r := filesystem.NewCompactReader()
 	w := filesystem.NewCompactWriter()
 	srv := &http.Server{Addr: ":3100", Handler: loki.NewServer(&loki.ServerOptions{
-		StorageReader: r,
 		StorageWriter: w,
 		LabelStore:    label.NewStore(1000),
 	})}
