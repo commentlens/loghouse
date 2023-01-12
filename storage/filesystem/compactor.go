@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,7 +19,8 @@ import (
 
 const (
 	CompactDir            = "data/compact"
-	CompactChunkFile      = "chunk.loghouse.tmp"
+	CompactTmpFile        = "chunk.loghouse.tmp"
+	CompactHeaderFile     = "header.loghouse"
 	CompactChunkMinAge    = 2 * time.Hour
 	CompactChunkMaxAge    = 8 * time.Hour
 	CompactChunkMinSize   = 1024 * 1024 * 100
@@ -37,7 +39,7 @@ func (*compactor) SwapChunk() error {
 }
 
 func compact() error {
-	chunks, err := findFiles(WriteDir, CompactChunkFile)
+	chunks, err := findFiles(WriteDir, CompactTmpFile)
 	if err != nil {
 		return err
 	}
@@ -73,19 +75,18 @@ func compactChunks(chunks []string) error {
 		if len(es) == 0 {
 			continue
 		}
+		sort.SliceStable(es, func(i, j int) bool { return es[i].Time.Before(es[j].Time) })
 
 		buf := new(bytes.Buffer)
-		err = chunkio.Write(buf, es, &chunkio.WriteOptions{
-			Compress: true,
-		})
+		err = chunkio.WriteData(buf, es, true)
+		if err != nil {
+			return err
+		}
+		err = os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, chunkID), 0777)
 		if err != nil {
 			return err
 		}
 		err = func() error {
-			err := os.MkdirAll(fmt.Sprintf("%s/%s", CompactDir, chunkID), 0777)
-			if err != nil {
-				return err
-			}
 			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, chunkID, WriteChunkFile), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
 			if err != nil {
 				return err
@@ -97,6 +98,25 @@ func compactChunks(chunks []string) error {
 				return err
 			}
 			return nil
+		}()
+		if err != nil {
+			return err
+		}
+		err = func() error {
+			f, err := os.OpenFile(fmt.Sprintf("%s/%s/%s", CompactDir, chunkID, CompactHeaderFile), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			return chunkio.WriteHeader(f, &chunkio.Header{
+				OffsetStart: bytesTotal,
+				Size:        uint64(buf.Len()),
+				Labels:      es[0].Labels,
+				Start:       es[0].Time,
+				End:         es[len(es)-1].Time,
+				Compression: "s2",
+			})
 		}()
 		if err != nil {
 			return err
@@ -168,7 +188,7 @@ func swapChunk() error {
 	}
 	for _, chunks := range swappable {
 		for _, chunk := range chunks {
-			err := os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactChunkFile))
+			err := os.Rename(chunk, fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactTmpFile))
 			if err != nil {
 				return err
 			}

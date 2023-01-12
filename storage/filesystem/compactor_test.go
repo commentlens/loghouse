@@ -105,7 +105,7 @@ func TestCompactor(t *testing.T) {
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
-	require.Len(t, files, 1)
+	require.Len(t, files, 2)
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestCompactor(t *testing.T) {
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
-	require.Len(t, files, 1)
+	require.Len(t, files, 2)
 
 	es2 := []*storage.LogEntry{
 		{
@@ -151,7 +151,7 @@ func TestCompactor(t *testing.T) {
 	dirs, files, err = dirfiles(CompactDir)
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
-	require.Len(t, files, 1)
+	require.Len(t, files, 2)
 
 	chunks, err := findFiles(CompactDir, WriteChunkFile)
 	require.NoError(t, err)

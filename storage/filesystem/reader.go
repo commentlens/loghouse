@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -43,71 +45,74 @@ type reader struct {
 }
 
 func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptions) error {
-	f, err := os.Open(chunk)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return chunkio.Read(ctx, bufio.NewReaderSize(f, chunkio.ReaderBufferSize), &chunkio.ReadOptions{
-		StorageReadOptions: *opts,
-	})
-}
-
-func (r *reader) dryRead(ctx context.Context, chunk string, opts *storage.ReadOptions) (bool, error) {
-	dryRunCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	var first *storage.LogEntry
-	err := r.read(dryRunCtx, chunk, &storage.ReadOptions{
-		ResultFunc: func(e *storage.LogEntry) {
-			if first == nil {
-				first = e
-				cancel()
+	if strings.HasPrefix(chunk, CompactDir) {
+		var hdrs []*chunkio.Header
+		err := func() error {
+			f, err := os.Open(fmt.Sprintf("%s%s", strings.TrimSuffix(chunk, WriteChunkFile), CompactHeaderFile))
+			if err != nil {
+				return err
 			}
-		},
-	})
-	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			select {
-			case <-ctx.Done():
-				return false, err
-			default:
+			defer f.Close()
+
+			r := bufio.NewReaderSize(f, chunkio.ReaderBufferSize)
+			for {
+				hdr, err := chunkio.ReadHeader(r)
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+				if !chunkio.MatchHeader(hdr, opts) {
+					continue
+				}
+				hdrs = append(hdrs, hdr)
 			}
-		} else {
-			return false, err
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
+		for _, hdr := range hdrs {
+			err := func() error {
+				f, err := os.Open(chunk)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+
+				sr := io.NewSectionReader(f, int64(hdr.OffsetStart), int64(hdr.Size))
+				return chunkio.ReadData(ctx, hdr, bufio.NewReaderSize(sr, chunkio.ReaderBufferSize), opts)
+			}()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	} else {
+		f, err := os.Open(chunk)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		r := bufio.NewReaderSize(f, chunkio.ReaderBufferSize)
+		hdr, err := chunkio.ReadHeader(r)
+		if err != nil {
+			return err
+		}
+		if !storage.MatchLabels(hdr.Labels, opts.Labels) {
+			return nil
+		}
+		return chunkio.ReadData(ctx, hdr, r, opts)
 	}
-	if first == nil {
-		return false, nil
-	}
-	if !storage.MatchLabels(first.Labels, opts.Labels) {
-		return false, nil
-	}
-	return true, nil
 }
 
 func (r *reader) Read(ctx context.Context, opts *storage.ReadOptions) error {
 	for _, chunk := range r.Chunks {
-		if strings.HasPrefix(chunk, CompactDir) {
-			err := r.read(ctx, chunk, opts)
-			if err != nil {
-				return err
-			}
-		} else {
-			ok, err := r.dryRead(ctx, chunk, opts)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				continue
-			}
-			optsNoLabels := *opts
-			optsNoLabels.Labels = nil
-			err = r.read(ctx, chunk, &optsNoLabels)
-			if err != nil {
-				return err
-			}
+		err := r.read(ctx, chunk, opts)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

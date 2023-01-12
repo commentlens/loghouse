@@ -34,7 +34,9 @@ func (w *writer) write(hash string, es []*storage.LogEntry) error {
 		}
 		defer f.Close()
 
-		return chunkio.WriteLabels(f, es[0].Labels)
+		return chunkio.WriteHeader(f, &chunkio.Header{
+			Labels: es[0].Labels,
+		})
 	}()
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
@@ -46,9 +48,7 @@ func (w *writer) write(hash string, es []*storage.LogEntry) error {
 		}
 		defer f.Close()
 
-		return chunkio.Write(f, es, &chunkio.WriteOptions{
-			DataOnly: true,
-		})
+		return chunkio.WriteData(f, es, false)
 	}()
 	if err != nil {
 		return err
