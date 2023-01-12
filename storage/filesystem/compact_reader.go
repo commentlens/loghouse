@@ -32,7 +32,20 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 			defer wg.Done()
 
 			for chunk := range chIn {
-				NewReader([]string{chunk}).Read(ctx, opts)
+				cr := NewReader([]string{chunk})
+				if r.reverse {
+					var es []*storage.LogEntry
+					nopts := *opts
+					nopts.ResultFunc = func(e *storage.LogEntry) {
+						es = append(es, e)
+					}
+					cr.Read(ctx, &nopts)
+					for i := len(es) - 1; i >= 0; i-- {
+						opts.ResultFunc(es[i])
+					}
+				} else {
+					cr.Read(ctx, opts)
+				}
 			}
 		}()
 	}
