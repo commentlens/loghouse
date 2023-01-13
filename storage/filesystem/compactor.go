@@ -17,14 +17,15 @@ import (
 )
 
 const (
-	CompactDir            = "data/compact"
-	CompactTmpFile        = "chunk.loghouse.tmp"
-	CompactHeaderFile     = "header.loghouse"
-	CompactChunkMinAge    = 2 * time.Hour
-	CompactChunkMaxAge    = 8 * time.Hour
-	CompactChunkMinSize   = 1024 * 1024 * 10
-	CompactChunkMaxSize   = 1024 * 1024 * 40
-	CompactChunkRemoveAge = 31 * 24 * time.Hour
+	CompactDir               = "data/compact"
+	CompactTmpFile           = "chunk.loghouse.tmp"
+	CompactHeaderFile        = "header.loghouse"
+	CompactChunkMinAge       = 2 * time.Hour
+	CompactChunkMaxAge       = 8 * time.Hour
+	CompactChunkMinSize      = 1024 * 1024 * 10
+	CompactChunkMaxSize      = 1024 * 1024 * 40
+	CompactEmptyDirRemoveAge = time.Minute
+	CompactChunkRemoveAge    = 31 * 24 * time.Hour
 )
 
 type compactor struct{}
@@ -50,7 +51,7 @@ func compact() error {
 	if err != nil {
 		return err
 	}
-	err = removeEmptyDir(WriteDir, CompactChunkMaxAge)
+	err = removeEmptyDir(WriteDir, CompactEmptyDirRemoveAge)
 	if err != nil {
 		return err
 	}
@@ -213,15 +214,18 @@ func removeEmptyDir(dir string, after time.Duration) error {
 	}
 	for _, d := range ds {
 		func() error {
-			path := fmt.Sprintf("%s/%s", dir, d.Name())
+			if !d.IsDir() {
+				return nil
+			}
 			fi, err := d.Info()
 			if err != nil {
-				return nil
+				return err
 			}
 			mtime := fi.ModTime()
 			if time.Since(mtime) < after {
 				return nil
 			}
+			path := fmt.Sprintf("%s/%s", dir, d.Name())
 			files, err := os.ReadDir(path)
 			if err != nil {
 				return err
@@ -232,8 +236,7 @@ func removeEmptyDir(dir string, after time.Duration) error {
 			if len(files) == 1 && files[0].Name() != CompactHeaderFile {
 				return nil
 			}
-			os.RemoveAll(path)
-			return nil
+			return os.RemoveAll(path)
 		}()
 		if err != nil {
 			return err
@@ -252,16 +255,18 @@ func removeOldChunk(dir string, after time.Duration) error {
 	}
 	for _, d := range ds {
 		func() error {
-			path := fmt.Sprintf("%s/%s", dir, d.Name())
+			if !d.IsDir() {
+				return nil
+			}
 			chunkID, err := ulid.ParseStrict(d.Name())
 			if err != nil {
-				return nil
+				return err
 			}
 			if time.Since(time.UnixMilli(int64(chunkID.Time()))) < after {
 				return nil
 			}
-			os.RemoveAll(path)
-			return nil
+			path := fmt.Sprintf("%s/%s", dir, d.Name())
+			return os.RemoveAll(path)
 		}()
 		if err != nil {
 			return err

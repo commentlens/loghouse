@@ -24,8 +24,8 @@ func findFiles(dir, name string) ([]string, error) {
 	var paths []string
 	for _, d := range ds {
 		path := fmt.Sprintf("%s/%s/%s", dir, d.Name(), name)
-		_, err := os.Stat(path)
-		if err == nil {
+		fi, err := os.Stat(path)
+		if err == nil && !fi.IsDir() {
 			paths = append(paths, path)
 		}
 	}
