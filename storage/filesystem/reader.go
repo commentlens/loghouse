@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -52,9 +51,11 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 		}
 		defer f.Close()
 
-		r := bufio.NewReaderSize(f, chunkio.ReaderBufferSize)
+		buf := chunkio.NewBuffer()
+		buf.Reset(f)
+		defer chunkio.RecycleBuffer(buf)
 		for {
-			hdr, err := chunkio.ReadHeader(r)
+			hdr, err := chunkio.ReadHeader(buf)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
@@ -83,7 +84,10 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 			if hdr.Size > 0 {
 				r = io.NewSectionReader(f, int64(hdr.OffsetStart), int64(hdr.Size))
 			}
-			return chunkio.ReadData(ctx, hdr, bufio.NewReaderSize(r, chunkio.ReaderBufferSize), opts)
+			buf := chunkio.NewBuffer()
+			buf.Reset(r)
+			defer chunkio.RecycleBuffer(buf)
+			return chunkio.ReadData(ctx, hdr, buf, opts)
 		}()
 		if err != nil {
 			return err

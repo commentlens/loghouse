@@ -1,7 +1,6 @@
 package chunkio
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -61,7 +60,10 @@ func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
 func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.ReadOptions) error {
 	switch hdr.Compression {
 	case "s2":
-		val = bufio.NewReaderSize(s2.NewReader(val), ReaderBufferSize)
+		buf := NewBuffer()
+		buf.Reset(s2.NewReader(val))
+		defer RecycleBuffer(buf)
+		val = buf
 	}
 	tr := tlv.NewReader(val)
 	for {

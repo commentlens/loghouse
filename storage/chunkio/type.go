@@ -10,10 +10,6 @@ import (
 	"github.com/commentlens/loghouse/storage/tlv"
 )
 
-const (
-	ReaderBufferSize = 1024 * 1024 * 10
-)
-
 var (
 	ErrUnexpectedTLVType = errors.New("unexpected tlv type")
 )
