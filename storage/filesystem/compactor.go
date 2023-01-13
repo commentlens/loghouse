@@ -3,8 +3,8 @@ package filesystem
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -33,8 +33,12 @@ func (*compactor) Compact() error {
 	return compact()
 }
 
-func (*compactor) SwapChunk() error {
-	return swapChunk()
+func (*compactor) FindCompactibleChunk() ([]string, error) {
+	return findCompactibleChunk()
+}
+
+func (*compactor) SwapChunk(chunks []string) error {
+	return swapChunk(chunks)
 }
 
 func compact() error {
@@ -163,16 +167,16 @@ func chunkCompactible(chunk string) (uint8, error) {
 	return 0, nil
 }
 
-func swapChunk() error {
+func findCompactibleChunk() ([]string, error) {
 	chunks, err := findFiles(WriteDir, WriteChunkFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var nowChunks, laterChunks []string
 	for _, chunk := range chunks {
 		status, err := chunkCompactible(chunk)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		switch status {
 		case 2:
@@ -181,74 +185,87 @@ func swapChunk() error {
 			laterChunks = append(laterChunks, chunk)
 		}
 	}
-	var swappable [][]string
+	var swappable []string
 	if len(nowChunks) > 0 {
-		swappable = append(swappable, nowChunks, laterChunks)
+		swappable = append(swappable, nowChunks...)
+		swappable = append(swappable, laterChunks...)
 	}
-	for _, chunks := range swappable {
-		for _, chunk := range chunks {
-			err := os.Rename(chunk, fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactTmpFile))
-			if err != nil {
-				return err
-			}
+	return swappable, nil
+}
+
+func swapChunk(chunks []string) error {
+	for _, chunk := range chunks {
+		err := os.Rename(chunk, fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactTmpFile))
+		if err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
 func removeEmptyDir(dir string, after time.Duration) error {
-	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
+	ds, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
-		if !d.IsDir() {
+		return err
+	}
+	for _, d := range ds {
+		func() error {
+			path := fmt.Sprintf("%s/%s", dir, d.Name())
+			fi, err := d.Info()
+			if err != nil {
+				return nil
+			}
+			mtime := fi.ModTime()
+			if time.Since(mtime) < after {
+				return nil
+			}
+			files, err := os.ReadDir(path)
+			if err != nil {
+				return err
+			}
+			if len(files) > 1 {
+				return nil
+			}
+			if len(files) == 1 && files[0].Name() != CompactHeaderFile {
+				return nil
+			}
+			os.RemoveAll(path)
 			return nil
-		}
-		if dir == path {
-			return nil
-		}
-		fi, err := d.Info()
-		if err != nil {
-			return nil
-		}
-		mtime := fi.ModTime()
-		if time.Since(mtime) < after {
-			return nil
-		}
-		files, err := os.ReadDir(path)
+		}()
 		if err != nil {
 			return err
 		}
-		if len(files) > 1 {
-			return nil
-		}
-		if len(files) == 1 && files[0].Name() != CompactHeaderFile {
-			return nil
-		}
-		os.RemoveAll(path)
-		return nil
-	})
+	}
+	return nil
 }
 
 func removeOldChunk(dir string, after time.Duration) error {
-	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	ds, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	for _, d := range ds {
+		func() error {
+			path := fmt.Sprintf("%s/%s", dir, d.Name())
+			chunkID, err := ulid.ParseStrict(d.Name())
+			if err != nil {
+				return nil
+			}
+			if time.Since(time.UnixMilli(int64(chunkID.Time()))) < after {
+				return nil
+			}
+			os.RemoveAll(path)
+			return nil
+		}()
 		if err != nil {
-			return nil
+			return err
 		}
-		if !d.IsDir() {
-			return nil
-		}
-		if dir == path {
-			return nil
-		}
-		chunkID, err := ulid.ParseStrict(d.Name())
-		if err != nil {
-			return nil
-		}
-		if time.Since(time.UnixMilli(int64(chunkID.Time()))) < after {
-			return nil
-		}
-		os.RemoveAll(path)
-		return nil
-	})
+	}
+	return nil
 }

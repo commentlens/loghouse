@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -15,22 +14,20 @@ import (
 )
 
 func findFiles(dir, name string) ([]string, error) {
-	var paths []string
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if d.Name() != name {
-			return nil
-		}
-		paths = append(paths, path)
-		return nil
-	})
+	ds, err := os.ReadDir(dir)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
+	}
+	var paths []string
+	for _, d := range ds {
+		path := fmt.Sprintf("%s/%s/%s", dir, d.Name(), name)
+		_, err := os.Stat(path)
+		if err == nil {
+			paths = append(paths, path)
+		}
 	}
 	return paths, nil
 }

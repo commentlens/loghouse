@@ -34,11 +34,15 @@ func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		chunks, err := w.c.FindCompactibleChunk()
+		if err != nil {
+			return err
+		}
 		err = func() error {
 			w.mu.Lock()
 			defer w.mu.Unlock()
 
-			return w.c.SwapChunk()
+			return w.c.SwapChunk(chunks)
 		}()
 		if err != nil {
 			return err

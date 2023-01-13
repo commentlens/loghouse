@@ -76,7 +76,9 @@ func TestCompactor(t *testing.T) {
 	require.NoError(t, err)
 
 	c := compactor{}
-	err = c.SwapChunk()
+	chunks, err := c.FindCompactibleChunk()
+	require.NoError(t, err)
+	err = c.SwapChunk(chunks)
 	require.NoError(t, err)
 	err = c.Compact()
 	require.NoError(t, err)
@@ -92,7 +94,9 @@ func TestCompactor(t *testing.T) {
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
-	err = c.SwapChunk()
+	chunks, err = c.FindCompactibleChunk()
+	require.NoError(t, err)
+	err = c.SwapChunk(chunks)
 	require.NoError(t, err)
 	err = c.Compact()
 	require.NoError(t, err)
@@ -108,7 +112,9 @@ func TestCompactor(t *testing.T) {
 
 	err = markChunkCompactible()
 	require.NoError(t, err)
-	err = c.SwapChunk()
+	chunks, err = c.FindCompactibleChunk()
+	require.NoError(t, err)
+	err = c.SwapChunk(chunks)
 	require.NoError(t, err)
 	err = c.Compact()
 	require.NoError(t, err)
@@ -152,7 +158,7 @@ func TestCompactor(t *testing.T) {
 	require.Len(t, dirs, 2)
 	require.Len(t, files, 2)
 
-	chunks, err := findFiles(CompactDir, WriteChunkFile)
+	chunks, err = findFiles(CompactDir, WriteChunkFile)
 	require.NoError(t, err)
 	r := NewReader(chunks)
 
