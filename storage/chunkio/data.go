@@ -39,11 +39,7 @@ func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		d, err := encodeString(string(e.Data))
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tlvTypeString, d)
+		err = tw.Write(tlvTypeString, e.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -91,18 +87,21 @@ func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.Rea
 		if typStr != tlvTypeString {
 			return ErrUnexpectedTLVType
 		}
-		s, err := decodeString(valStr)
+		b, err := readAll(valStr)
 		if err != nil {
 			return err
 		}
 		e := storage.LogEntry{
 			Labels: hdr.Labels,
 			Time:   t,
-			Data:   storage.LogEntryData(s),
+			Data:   b,
 		}
 		if !storage.MatchLogEntry(&e, opts) {
 			continue
 		}
+		data := make([]byte, len(b))
+		copy(data, b)
+		e.Data = data
 		opts.ResultFunc(&e)
 		select {
 		case <-ctx.Done():

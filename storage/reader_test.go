@@ -19,7 +19,7 @@ func TestMatchLogEntry(t *testing.T) {
 				"role": "test1",
 			},
 			Time: now(),
-			Data: `{"test":1}`,
+			Data: []byte(`{"test":1}`),
 		},
 		{
 			Labels: map[string]string{
@@ -27,7 +27,7 @@ func TestMatchLogEntry(t *testing.T) {
 				"role": "test2",
 			},
 			Time: now().Add(time.Hour),
-			Data: `{"test":2}`,
+			Data: []byte(`{"test":2}`),
 		},
 	}
 	for _, test := range []struct {

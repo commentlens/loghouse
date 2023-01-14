@@ -21,7 +21,7 @@ func TestWriter(t *testing.T) {
 				"role": "test2",
 			},
 			Time: now(),
-			Data: `{"test":1}`,
+			Data: []byte(`{"test":1}`),
 		},
 		{
 			Labels: map[string]string{
@@ -29,7 +29,7 @@ func TestWriter(t *testing.T) {
 				"role": "test2",
 			},
 			Time: now(),
-			Data: `{"test":2}`,
+			Data: []byte(`{"test":2}`),
 		},
 	}
 	err := w.Write(es)

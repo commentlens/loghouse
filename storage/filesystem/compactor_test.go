@@ -53,7 +53,7 @@ func TestCompactor(t *testing.T) {
 				"role": "test",
 			},
 			Time: now(),
-			Data: `{"test":1}`,
+			Data: []byte(`{"test":1}`),
 		},
 		{
 			Labels: map[string]string{
@@ -61,7 +61,7 @@ func TestCompactor(t *testing.T) {
 				"role": "test2",
 			},
 			Time: now(),
-			Data: `{"test":2}`,
+			Data: []byte(`{"test":2}`),
 		},
 		{
 			Labels: map[string]string{
@@ -69,7 +69,7 @@ func TestCompactor(t *testing.T) {
 				"role": "test3",
 			},
 			Time: now(),
-			Data: `{"test":3}`,
+			Data: []byte(`{"test":3}`),
 		},
 	}
 	err := w.Write(es)
@@ -135,7 +135,7 @@ func TestCompactor(t *testing.T) {
 				"role": "test4",
 			},
 			Time: now(),
-			Data: `{"test":4}`,
+			Data: []byte(`{"test":4}`),
 		},
 		{
 			Labels: map[string]string{
@@ -143,7 +143,7 @@ func TestCompactor(t *testing.T) {
 				"role": "test5",
 			},
 			Time: now(),
-			Data: `{"test":5}`,
+			Data: []byte(`{"test":5}`),
 		},
 	}
 	err = w.Write(es2)
@@ -199,7 +199,7 @@ func TestCompactReadWriter(t *testing.T) {
 				"role": "test",
 			},
 			Time: now(),
-			Data: `{"test":1}`,
+			Data: []byte(`{"test":1}`),
 		},
 		{
 			Labels: map[string]string{
@@ -207,7 +207,7 @@ func TestCompactReadWriter(t *testing.T) {
 				"role": "test2",
 			},
 			Time: now(),
-			Data: `{"test":2}`,
+			Data: []byte(`{"test":2}`),
 		},
 		{
 			Labels: map[string]string{
@@ -215,7 +215,7 @@ func TestCompactReadWriter(t *testing.T) {
 				"role": "test3",
 			},
 			Time: now(),
-			Data: `{"test":3}`,
+			Data: []byte(`{"test":3}`),
 		},
 	}
 	err := w.Write(es)

@@ -11,19 +11,19 @@ type LogEntry struct {
 	Data   LogEntryData
 }
 
-type LogEntryData string
+type LogEntryData []byte
 
 func (m LogEntryData) MarshalJSON() ([]byte, error) {
-	if m == "" {
+	if m == nil {
 		return []byte("null"), nil
 	}
-	return []byte(m), nil
+	return m, nil
 }
 
 func (m *LogEntryData) UnmarshalJSON(data []byte) error {
-	if !bytes.HasPrefix(data, []byte{'{'}) && bytes.HasSuffix(data, []byte{'}'}) {
-		return nil
+	if !(bytes.HasPrefix(data, []byte{'{'}) && bytes.HasSuffix(data, []byte{'}'})) {
+		data = nil
 	}
-	*m = LogEntryData(data)
+	*m = append((*m)[0:0], data...)
 	return nil
 }
