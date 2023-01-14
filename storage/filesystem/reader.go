@@ -52,8 +52,8 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 		defer f.Close()
 
 		buf := chunkio.NewBuffer()
-		buf.Reset(f)
 		defer chunkio.RecycleBuffer(buf)
+		buf.Reset(f)
 		for {
 			hdr, err := chunkio.ReadHeader(buf)
 			if err != nil {
@@ -85,8 +85,8 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 				r = io.NewSectionReader(f, int64(hdr.OffsetStart), int64(hdr.Size))
 			}
 			buf := chunkio.NewBuffer()
-			buf.Reset(r)
 			defer chunkio.RecycleBuffer(buf)
+			buf.Reset(r)
 			return chunkio.ReadData(ctx, hdr, buf, opts)
 		}()
 		if err != nil {

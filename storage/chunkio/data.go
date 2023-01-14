@@ -60,9 +60,12 @@ func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
 func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.ReadOptions) error {
 	switch hdr.Compression {
 	case "s2":
+		s2r := newS2Reader()
+		defer recycleS2Reader(s2r)
+		s2r.Reset(val)
 		buf := NewBuffer()
-		buf.Reset(s2.NewReader(val))
 		defer RecycleBuffer(buf)
+		buf.Reset(s2r)
 		val = buf
 	}
 	tr := tlv.NewReader(val)
