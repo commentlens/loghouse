@@ -5,8 +5,14 @@ import (
 	"io"
 )
 
+type Valuer interface {
+	io.Reader
+	ReadAll() ([]byte, error)
+	Skip() error
+}
+
 type Reader interface {
-	Read() (uint64, io.ReadCloser, error)
+	Read() (uint64, Valuer, error)
 }
 
 type reader struct {
@@ -21,7 +27,7 @@ func NewReader(r io.Reader) Reader {
 	}
 }
 
-type Valuer struct {
+type valuer struct {
 	r *io.LimitedReader
 }
 
@@ -29,26 +35,26 @@ type peeker interface {
 	Peek(int) ([]byte, error)
 }
 
-func (v *Valuer) Read(b []byte) (int, error) {
+func (v valuer) Read(b []byte) (int, error) {
 	return v.r.Read(b)
 }
 
-func (v *Valuer) Peek(n int) ([]byte, error) {
+func (v valuer) Peek(n int) ([]byte, error) {
 	return v.r.R.(peeker).Peek(n)
 }
 
-func (v *Valuer) ReadAll() ([]byte, error) {
-	defer v.Close()
+func (v valuer) ReadAll() ([]byte, error) {
+	defer v.Skip()
 
 	return v.Peek(int(v.r.N))
 }
 
-func (v *Valuer) Close() error {
+func (v valuer) Skip() error {
 	_, err := io.Copy(io.Discard, v.r)
 	return err
 }
 
-func (r *reader) Read() (uint64, io.ReadCloser, error) {
+func (r *reader) Read() (uint64, Valuer, error) {
 	typ, err := r.readUint64()
 	if err != nil {
 		return 0, nil, err
@@ -57,7 +63,7 @@ func (r *reader) Read() (uint64, io.ReadCloser, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	val := &Valuer{r: &io.LimitedReader{R: r.r, N: int64(l)}}
+	val := valuer{r: &io.LimitedReader{R: r.r, N: int64(l)}}
 	return typ, val, nil
 }
 

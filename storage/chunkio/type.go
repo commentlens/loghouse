@@ -26,7 +26,7 @@ const (
 )
 
 func readAll(val io.Reader) ([]byte, error) {
-	return val.(*tlv.Valuer).ReadAll()
+	return val.(tlv.Valuer).ReadAll()
 }
 
 func encodeString(s string) ([]byte, error) {
