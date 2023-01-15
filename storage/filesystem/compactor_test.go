@@ -46,7 +46,7 @@ func TestCompactor(t *testing.T) {
 
 	w := NewWriter()
 
-	es := []*storage.LogEntry{
+	es := []storage.LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",
@@ -128,7 +128,7 @@ func TestCompactor(t *testing.T) {
 	require.Len(t, dirs, 2)
 	require.Len(t, files, 2)
 
-	es2 := []*storage.LogEntry{
+	es2 := []storage.LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",
@@ -162,24 +162,24 @@ func TestCompactor(t *testing.T) {
 	require.NoError(t, err)
 	r := NewReader(chunks)
 
-	var esReadNew []*storage.LogEntry
+	var esReadNew []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"role": "test5",
 		},
-		ResultFunc: func(e *storage.LogEntry) {
+		ResultFunc: func(e storage.LogEntry) {
 			esReadNew = append(esReadNew, e)
 		},
 	})
 	require.NoError(t, err)
 	require.Len(t, esReadNew, 0)
 
-	var esReadOld []*storage.LogEntry
+	var esReadOld []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},
-		ResultFunc: func(e *storage.LogEntry) {
+		ResultFunc: func(e storage.LogEntry) {
 			esReadOld = append(esReadOld, e)
 		},
 	})
@@ -192,7 +192,7 @@ func TestCompactReadWriter(t *testing.T) {
 	os.RemoveAll(CompactDir)
 
 	w := NewCompactWriter()
-	es := []*storage.LogEntry{
+	es := []storage.LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",
@@ -223,12 +223,12 @@ func TestCompactReadWriter(t *testing.T) {
 
 	r := NewCompactReader(1, false)
 
-	var esReadBefore []*storage.LogEntry
+	var esReadBefore []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},
-		ResultFunc: func(e *storage.LogEntry) {
+		ResultFunc: func(e storage.LogEntry) {
 			esReadBefore = append(esReadBefore, e)
 		},
 	})
@@ -245,12 +245,12 @@ func TestCompactReadWriter(t *testing.T) {
 	err = os.RemoveAll(WriteDir)
 	require.NoError(t, err)
 
-	var esReadAfter []*storage.LogEntry
+	var esReadAfter []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app": "test",
 		},
-		ResultFunc: func(e *storage.LogEntry) {
+		ResultFunc: func(e storage.LogEntry) {
 			esReadAfter = append(esReadAfter, e)
 		},
 	})

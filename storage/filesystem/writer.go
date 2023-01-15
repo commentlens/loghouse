@@ -20,7 +20,7 @@ func NewWriter() storage.Writer {
 
 type writer struct{}
 
-func (w *writer) write(hash string, es []*storage.LogEntry) error {
+func (w *writer) write(hash string, es []storage.LogEntry) error {
 	dir := fmt.Sprintf("%s/%s", WriteDir, hash)
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
@@ -55,8 +55,8 @@ func (w *writer) write(hash string, es []*storage.LogEntry) error {
 	return nil
 }
 
-func (w *writer) Write(es []*storage.LogEntry) error {
-	m := make(map[string][]*storage.LogEntry)
+func (w *writer) Write(es []storage.LogEntry) error {
+	m := make(map[string][]storage.LogEntry)
 	for _, e := range es {
 		h, err := storage.HashLabels(e.Labels)
 		if err != nil {

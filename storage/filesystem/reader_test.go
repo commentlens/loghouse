@@ -19,7 +19,7 @@ func TestReader(t *testing.T) {
 
 	w := NewWriter()
 
-	es := []*storage.LogEntry{
+	es := []storage.LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",
@@ -44,13 +44,13 @@ func TestReader(t *testing.T) {
 	require.NoError(t, err)
 
 	r := NewReader(chunks)
-	var esRead []*storage.LogEntry
+	var esRead []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
 		Labels: map[string]string{
 			"app":  "test",
 			"role": "test2",
 		},
-		ResultFunc: func(e *storage.LogEntry) {
+		ResultFunc: func(e storage.LogEntry) {
 			esRead = append(esRead, e)
 		},
 	})

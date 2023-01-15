@@ -59,7 +59,7 @@ func (w *compactWriter) BackgroundCompact(ctx context.Context) error {
 	}
 }
 
-func (w *compactWriter) Write(es []*storage.LogEntry) error {
+func (w *compactWriter) Write(es []storage.LogEntry) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.w.Write(es)

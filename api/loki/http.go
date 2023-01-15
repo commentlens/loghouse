@@ -129,7 +129,7 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
-				ResultFunc: func(e *storage.LogEntry) {
+				ResultFunc: func(e storage.LogEntry) {
 					i := e.Time.Sub(start) / readStep
 					mu[i].Lock()
 					defer mu[i].Unlock()
@@ -160,13 +160,13 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			readLimit = n
 		}
 		reverse := query.Get("direction") == "backward"
-		var es []*storage.LogEntry
+		var es []storage.LogEntry
 		var mu sync.Mutex
 		scan := func(start, end time.Time) error {
 			return logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, reverse), &storage.ReadOptions{
 				Start: start,
 				End:   end,
-				ResultFunc: func(e *storage.LogEntry) {
+				ResultFunc: func(e storage.LogEntry) {
 					mu.Lock()
 					defer mu.Unlock()
 
@@ -207,8 +207,8 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 	})
 }
 
-func createStreams(es []*storage.LogEntry) ([]*Stream, error) {
-	m := make(map[string][]*storage.LogEntry)
+func createStreams(es []storage.LogEntry) ([]*Stream, error) {
+	m := make(map[string][]storage.LogEntry)
 	for _, e := range es {
 		h, err := storage.HashLabels(e.Labels)
 		if err != nil {
@@ -269,12 +269,12 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 		defer ticker.Stop()
 
 		for {
-			var es []*storage.LogEntry
+			var es []storage.LogEntry
 			var mu sync.Mutex
 			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
-				ResultFunc: func(e *storage.LogEntry) {
+				ResultFunc: func(e storage.LogEntry) {
 					mu.Lock()
 					defer mu.Unlock()
 					es = append(es, e)
@@ -370,7 +370,7 @@ func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httpr
 			for k, v := range stream.Stream {
 				opts.LabelStore.Add(k, v)
 			}
-			var es []*storage.LogEntry
+			var es []storage.LogEntry
 			for _, v := range stream.Values {
 				if len(v) != 2 {
 					continue
@@ -379,7 +379,7 @@ func (opts *ServerOptions) push(rw http.ResponseWriter, r *http.Request, _ httpr
 				if err != nil {
 					return err
 				}
-				es = append(es, &storage.LogEntry{
+				es = append(es, storage.LogEntry{
 					Labels: stream.Stream,
 					Time:   time.Unix(0, int64(nsec)),
 					Data:   storage.LogEntryData(v[1]),

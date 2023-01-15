@@ -17,6 +17,7 @@ type Reader interface {
 
 type reader struct {
 	r io.Reader
+	b [8]byte
 }
 
 func NewReader(r io.Reader) Reader {
@@ -64,13 +65,12 @@ func (r *reader) Read() (uint64, Valuer, error) {
 }
 
 func (r *reader) readUint64() (uint64, error) {
-	var b [8]byte
-	_, err := io.ReadFull(r.r, b[:1])
+	_, err := io.ReadFull(r.r, r.b[:1])
 	if err != nil {
 		return 0, err
 	}
 	var n int64
-	switch b[0] {
+	switch r.b[0] {
 	case 0xFF:
 		n = 8
 	case 0xFE:
@@ -79,19 +79,19 @@ func (r *reader) readUint64() (uint64, error) {
 		n = 2
 	}
 	if n > 0 {
-		_, err := io.ReadFull(r.r, b[:n])
+		_, err := io.ReadFull(r.r, r.b[:n])
 		if err != nil {
 			return 0, err
 		}
 	}
 	switch n {
 	case 8:
-		return binary.BigEndian.Uint64(b[:n]), nil
+		return binary.BigEndian.Uint64(r.b[:n]), nil
 	case 4:
-		return uint64(binary.BigEndian.Uint32(b[:n])), nil
+		return uint64(binary.BigEndian.Uint32(r.b[:n])), nil
 	case 2:
-		return uint64(binary.BigEndian.Uint16(b[:n])), nil
+		return uint64(binary.BigEndian.Uint16(r.b[:n])), nil
 	default:
-		return uint64(b[0]), nil
+		return uint64(r.b[0]), nil
 	}
 }

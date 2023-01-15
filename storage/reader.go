@@ -13,8 +13,8 @@ type ReadOptions struct {
 	Labels     map[string]string
 	Start      time.Time
 	End        time.Time
-	FilterFunc func(*LogEntry) bool
-	ResultFunc func(*LogEntry)
+	FilterFunc func(LogEntry) bool
+	ResultFunc func(LogEntry)
 }
 
 func MatchLabels(m, query map[string]string) bool {
@@ -26,7 +26,7 @@ func MatchLabels(m, query map[string]string) bool {
 	return true
 }
 
-func MatchLogEntry(e *LogEntry, opts *ReadOptions) bool {
+func MatchLogEntry(e LogEntry, opts *ReadOptions) bool {
 	if !MatchLabels(e.Labels, opts.Labels) {
 		return false
 	}

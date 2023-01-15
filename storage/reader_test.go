@@ -12,7 +12,7 @@ func now() time.Time {
 }
 
 func TestMatchLogEntry(t *testing.T) {
-	es := []*LogEntry{
+	es := []LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",
@@ -33,7 +33,7 @@ func TestMatchLogEntry(t *testing.T) {
 	for _, test := range []struct {
 		name        string
 		readOptions *ReadOptions
-		want        []*LogEntry
+		want        []LogEntry
 	}{
 		{
 			name: "match labels",
@@ -43,7 +43,7 @@ func TestMatchLogEntry(t *testing.T) {
 					"role": "test2",
 				},
 			},
-			want: []*LogEntry{es[1]},
+			want: []LogEntry{es[1]},
 		},
 		{
 			name: "match some labels",
@@ -85,7 +85,7 @@ func TestMatchLogEntry(t *testing.T) {
 				Start:  now().Add(-time.Hour),
 				End:    now(),
 			},
-			want: []*LogEntry{es[0]},
+			want: []LogEntry{es[0]},
 		},
 		{
 			name: "mismatch time",
@@ -97,7 +97,7 @@ func TestMatchLogEntry(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			var got []*LogEntry
+			var got []LogEntry
 			for _, e := range es {
 				if !MatchLogEntry(e, test.readOptions) {
 					continue

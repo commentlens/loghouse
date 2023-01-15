@@ -11,7 +11,7 @@ import (
 	"github.com/klauspost/compress/s2"
 )
 
-func WriteData(w io.Writer, es []*storage.LogEntry, compress bool) error {
+func WriteData(w io.Writer, es []storage.LogEntry, compress bool) error {
 	b, err := encodeData(es, compress)
 	if err != nil {
 		return err
@@ -23,7 +23,7 @@ func WriteData(w io.Writer, es []*storage.LogEntry, compress bool) error {
 	return nil
 }
 
-func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
+func encodeData(es []storage.LogEntry, compress bool) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	var w io.Writer = buf
 	if compress {
@@ -92,13 +92,13 @@ func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.Rea
 			Time:   t,
 			Data:   b,
 		}
-		if !storage.MatchLogEntry(&e, opts) {
+		if !storage.MatchLogEntry(e, opts) {
 			continue
 		}
 		data := make([]byte, len(b))
 		copy(data, b)
 		e.Data = data
-		opts.ResultFunc(&e)
+		opts.ResultFunc(e)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

@@ -8,7 +8,7 @@ import (
 )
 
 type Writer interface {
-	Write([]*LogEntry) error
+	Write([]LogEntry) error
 }
 
 func HashLabels(labels map[string]string) (string, error) {

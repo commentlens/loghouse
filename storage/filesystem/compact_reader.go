@@ -34,9 +34,9 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 			for chunk := range chIn {
 				cr := NewReader([]string{chunk})
 				if r.reverse {
-					var es []*storage.LogEntry
+					var es []storage.LogEntry
 					nopts := *opts
-					nopts.ResultFunc = func(e *storage.LogEntry) {
+					nopts.ResultFunc = func(e storage.LogEntry) {
 						es = append(es, e)
 					}
 					cr.Read(ctx, &nopts)

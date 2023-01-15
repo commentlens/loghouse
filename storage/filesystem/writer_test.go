@@ -14,7 +14,7 @@ func TestWriter(t *testing.T) {
 
 	w := NewWriter()
 
-	es := []*storage.LogEntry{
+	es := []storage.LogEntry{
 		{
 			Labels: map[string]string{
 				"app":  "test",

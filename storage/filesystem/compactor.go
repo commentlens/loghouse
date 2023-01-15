@@ -67,9 +67,9 @@ func compactChunks(chunks []string) error {
 	var bytesTotal uint64
 	for _, chunk := range chunks {
 		r := NewReader([]string{chunk})
-		var es []*storage.LogEntry
+		var es []storage.LogEntry
 		err := r.Read(context.Background(), &storage.ReadOptions{
-			ResultFunc: func(e *storage.LogEntry) {
+			ResultFunc: func(e storage.LogEntry) {
 				es = append(es, e)
 			},
 		})
