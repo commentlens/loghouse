@@ -12,13 +12,11 @@ type Writer interface {
 
 type writer struct {
 	w io.Writer
-	b []byte
 }
 
 func NewWriter(w io.Writer) Writer {
 	return &writer{
 		w: w,
-		b: make([]byte, 9),
 	}
 }
 
@@ -39,24 +37,25 @@ func (w *writer) Write(typ uint64, val []byte) error {
 }
 
 func (w *writer) writeUint64(v uint64) error {
+	var b [9]byte
 	var n int
 	switch {
 	case v > math.MaxUint32:
-		w.b[0] = 0xFF
-		binary.BigEndian.PutUint64(w.b[1:], v)
+		b[0] = 0xFF
+		binary.BigEndian.PutUint64(b[1:], v)
 		n = 9
 	case v > math.MaxUint16:
-		w.b[0] = 0xFE
-		binary.BigEndian.PutUint32(w.b[1:], uint32(v))
+		b[0] = 0xFE
+		binary.BigEndian.PutUint32(b[1:], uint32(v))
 		n = 5
 	case v > math.MaxUint8-3:
-		w.b[0] = 0xFD
-		binary.BigEndian.PutUint16(w.b[1:], uint16(v))
+		b[0] = 0xFD
+		binary.BigEndian.PutUint16(b[1:], uint16(v))
 		n = 3
 	default:
-		w.b[0] = uint8(v)
+		b[0] = uint8(v)
 		n = 1
 	}
-	_, err := w.w.Write(w.b[:n])
+	_, err := w.w.Write(b[:n])
 	return err
 }
