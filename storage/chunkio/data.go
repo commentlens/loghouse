@@ -31,11 +31,7 @@ func encodeData(es []*storage.LogEntry, compress bool) ([]byte, error) {
 	}
 	tw := tlv.NewWriter(w)
 	for _, e := range es {
-		t, err := encodeTime(e.Time)
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tlvTypeStart, t)
+		err := encodeTime(w, tlvTypeStart, e.Time)
 		if err != nil {
 			return nil, err
 		}

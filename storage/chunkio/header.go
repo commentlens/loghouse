@@ -56,59 +56,34 @@ func ReadHeader(r io.Reader) (*Header, error) {
 func encodeHeader(hdr *Header) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
-	tw := tlv.NewWriter(buf)
-	offsetStart, err := encodeUint64(hdr.OffsetStart)
+	err := encodeUint64(buf, tlvTypeOffsetStart, hdr.OffsetStart)
 	if err != nil {
 		return nil, err
 	}
-	err = tw.Write(tlvTypeOffsetStart, offsetStart)
-	if err != nil {
-		return nil, err
-	}
-	size, err := encodeUint64(hdr.Size)
-	if err != nil {
-		return nil, err
-	}
-	err = tw.Write(tlvTypeSize, size)
+	err = encodeUint64(buf, tlvTypeSize, hdr.Size)
 	if err != nil {
 		return nil, err
 	}
 	if len(hdr.Labels) > 0 {
-		labels, err := encodeMap(hdr.Labels)
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tlvTypeLabels, labels)
+		err := encodeMap(buf, tlvTypeLabels, hdr.Labels)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if !hdr.Start.IsZero() {
-		start, err := encodeTime(hdr.Start)
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tlvTypeStart, start)
+		err := encodeTime(buf, tlvTypeStart, hdr.Start)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if !hdr.End.IsZero() {
-		end, err := encodeTime(hdr.End)
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tlvTypeEnd, end)
+		err := encodeTime(buf, tlvTypeEnd, hdr.End)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if hdr.Compression != "" {
-		compression, err := encodeString("s2")
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tlvTypeCompression, compression)
+		err := encodeString(buf, tlvTypeCompression, "s2")
 		if err != nil {
 			return nil, err
 		}

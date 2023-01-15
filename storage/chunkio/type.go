@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"time"
+	"unsafe"
 
 	"github.com/commentlens/loghouse/storage/tlv"
 )
@@ -29,8 +30,8 @@ func readAll(val io.Reader) ([]byte, error) {
 	return val.(tlv.Valuer).ReadAll()
 }
 
-func encodeString(s string) ([]byte, error) {
-	return []byte(s), nil
+func encodeString(w io.Writer, typ uint64, s string) error {
+	return tlv.NewWriter(w).Write(typ, *(*[]byte)(unsafe.Pointer(&s)))
 }
 
 func decodeString(val io.Reader) (string, error) {
@@ -41,10 +42,10 @@ func decodeString(val io.Reader) (string, error) {
 	return string(b), nil
 }
 
-func encodeUint64(n uint64) ([]byte, error) {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, n)
-	return b, nil
+func encodeUint64(w io.Writer, typ uint64, n uint64) error {
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], n)
+	return tlv.NewWriter(w).Write(typ, b[:])
 }
 
 func decodeUint64(val io.Reader) (uint64, error) {
@@ -55,8 +56,8 @@ func decodeUint64(val io.Reader) (uint64, error) {
 	return binary.BigEndian.Uint64(b), nil
 }
 
-func encodeTime(t time.Time) ([]byte, error) {
-	return encodeUint64(uint64(t.UnixMilli()))
+func encodeTime(w io.Writer, typ uint64, t time.Time) error {
+	return encodeUint64(w, typ, uint64(t.UnixMilli()))
 }
 
 func decodeTime(val io.Reader) (time.Time, error) {
@@ -67,22 +68,17 @@ func decodeTime(val io.Reader) (time.Time, error) {
 	return time.UnixMilli(int64(n)).UTC(), nil
 }
 
-func encodeMap(m map[string]string) ([]byte, error) {
+func encodeMap(w io.Writer, typ uint64, m map[string]string) error {
 	buf := new(bytes.Buffer)
-	tw := tlv.NewWriter(buf)
 	for k, v := range m {
 		for _, s := range []string{k, v} {
-			b, err := encodeString(s)
+			err := encodeString(buf, tlvTypeString, s)
 			if err != nil {
-				return nil, err
-			}
-			err = tw.Write(tlvTypeString, b)
-			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
-	return buf.Bytes(), nil
+	return tlv.NewWriter(w).Write(typ, buf.Bytes())
 }
 
 func decodeMap(val io.Reader) (map[string]string, error) {
