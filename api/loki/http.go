@@ -122,23 +122,25 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			return nil, err
 		}
 		if isHistogram {
-			var values [][]interface{}
 			histogramSize := end.Sub(start)/readStep + 1
 			histogram := make([]uint64, histogramSize)
 			mu := make([]sync.Mutex, histogramSize)
 			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
-				ResultFunc: func(e storage.LogEntry) {
+				FilterFunc: func(e storage.LogEntry) bool {
 					i := e.Time.Sub(start) / readStep
 					mu[i].Lock()
 					defer mu[i].Unlock()
 					histogram[i] += 1
+					return false
 				},
+				ResultFunc: func(e storage.LogEntry) {},
 			}, query.Get("query"))
 			if err != nil {
 				return nil, err
 			}
+			var values [][]interface{}
 			for i, count := range histogram {
 				if count > 0 {
 					values = append(values, []interface{}{
@@ -162,23 +164,20 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		reverse := query.Get("direction") == "backward"
 		var es []storage.LogEntry
 		var mu sync.Mutex
-		scan := func(start, end time.Time) error {
-			return logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, reverse), &storage.ReadOptions{
-				Start: start,
-				End:   end,
-				ResultFunc: func(e storage.LogEntry) {
-					mu.Lock()
-					defer mu.Unlock()
+		err = logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, reverse), &storage.ReadOptions{
+			Start: start,
+			End:   end,
+			ResultFunc: func(e storage.LogEntry) {
+				mu.Lock()
+				defer mu.Unlock()
 
-					if uint64(len(es)) < readLimit {
-						es = append(es, e)
-					} else {
-						cancel()
-					}
-				},
-			}, query.Get("query"))
-		}
-		err = scan(start, end)
+				if uint64(len(es)) < readLimit {
+					es = append(es, e)
+				} else {
+					cancel()
+				}
+			},
+		}, query.Get("query"))
 		if err != nil && !errors.Is(err, context.Canceled) {
 			return nil, err
 		}

@@ -212,6 +212,9 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 	if err != nil {
 		return err
 	}
+	if ropts.FilterFunc != nil {
+		filters = append(filters, ropts.FilterFunc)
+	}
 	ropts.FilterFunc = func(e storage.LogEntry) bool {
 		for _, filter := range filters {
 			if !filter(e) {

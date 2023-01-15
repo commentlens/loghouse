@@ -22,8 +22,8 @@ const (
 	CompactHeaderFile        = "header.loghouse"
 	CompactChunkMinAge       = 2 * time.Hour
 	CompactChunkMaxAge       = 8 * time.Hour
-	CompactChunkMinSize      = 1024 * 1024 * 10
-	CompactChunkMaxSize      = 1024 * 1024 * 40
+	CompactChunkMinSize      = 1024 * 1024 * 50
+	CompactChunkMaxSize      = 1024 * 1024 * 200
 	CompactEmptyDirRemoveAge = time.Minute
 	CompactChunkRemoveAge    = 31 * 24 * time.Hour
 )
