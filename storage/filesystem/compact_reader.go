@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	"github.com/commentlens/loghouse/storage"
@@ -19,7 +20,7 @@ type compactReader struct {
 	reverse     bool
 }
 
-func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) error {
+func (r *compactReader) read(ctx context.Context, chunks []string, opts *storage.ReadOptions) error {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
@@ -49,18 +50,6 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 			}
 		}()
 	}
-
-	var chunks []string
-	for _, dir := range []string{CompactDir, WriteDir} {
-		files, err := findFiles(dir, WriteChunkFile)
-		if err != nil {
-			return err
-		}
-		chunks = append(chunks, files...)
-	}
-	if r.reverse {
-		reverseStrings(chunks)
-	}
 	for _, chunk := range chunks {
 		select {
 		case <-ctx.Done():
@@ -71,9 +60,43 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 	return nil
 }
 
-func reverseStrings(ss []string) {
-	last := len(ss) - 1
-	for i := 0; i < len(ss)/2; i++ {
-		ss[i], ss[last-i] = ss[last-i], ss[i]
+func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) error {
+	var dirs []string
+	if r.reverse {
+		dirs = []string{WriteDir, CompactDir}
+	} else {
+		dirs = []string{CompactDir, WriteDir}
 	}
+	for _, dir := range dirs {
+		chunks, err := findSortFiles(dir, WriteChunkFile, func(ds []os.DirEntry) (lessFunc, error) {
+			switch dir {
+			case WriteDir:
+				var mts []int64
+				for _, d := range ds {
+					fi, err := d.Info()
+					if err != nil {
+						return nil, err
+					}
+					mts = append(mts, fi.ModTime().UnixMilli())
+				}
+				if r.reverse {
+					return func(i, j int) bool { return mts[i] > mts[j] }, nil
+				}
+				return func(i, j int) bool { return mts[i] < mts[j] }, nil
+			default:
+				if r.reverse {
+					return func(i, j int) bool { return ds[i].Name() > ds[j].Name() }, nil
+				}
+				return func(i, j int) bool { return ds[i].Name() < ds[j].Name() }, nil
+			}
+		})
+		if err != nil {
+			return err
+		}
+		err = r.read(ctx, chunks, opts)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

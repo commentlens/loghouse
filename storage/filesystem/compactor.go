@@ -205,7 +205,7 @@ func swapChunk(chunks []string) error {
 }
 
 func removeEmptyDir(dir string, after time.Duration) error {
-	ds, err := os.ReadDir(dir)
+	ds, err := osReadDir(dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
@@ -226,7 +226,7 @@ func removeEmptyDir(dir string, after time.Duration) error {
 				return nil
 			}
 			path := fmt.Sprintf("%s/%s", dir, d.Name())
-			files, err := os.ReadDir(path)
+			files, err := osReadDir(path)
 			if err != nil {
 				return err
 			}
@@ -246,7 +246,7 @@ func removeEmptyDir(dir string, after time.Duration) error {
 }
 
 func removeOldChunk(dir string, after time.Duration) error {
-	ds, err := os.ReadDir(dir)
+	ds, err := osReadDir(dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil

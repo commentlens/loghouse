@@ -7,18 +7,42 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/chunkio"
 )
 
+func osReadDir(dir string) ([]os.DirEntry, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return f.ReadDir(-1)
+}
+
 func findFiles(dir, name string) ([]string, error) {
-	ds, err := os.ReadDir(dir)
+	return findSortFiles(dir, name, nil)
+}
+
+type lessFunc func(int, int) bool
+
+func findSortFiles(dir, name string, f func([]os.DirEntry) (lessFunc, error)) ([]string, error) {
+	ds, err := osReadDir(dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if f != nil {
+		less, err := f(ds)
+		if err != nil {
+			return nil, err
+		}
+		sort.Slice(ds, less)
 	}
 	var paths []string
 	for _, d := range ds {
