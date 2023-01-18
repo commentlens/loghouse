@@ -77,6 +77,9 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			if err != nil {
 				return err
 			}
+			if val == "" {
+				return nil
+			}
 			bVal := []byte(val)
 			switch op {
 			case "|=":
@@ -211,6 +214,9 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 	})
 	if err != nil {
 		return err
+	}
+	if len(filters) > 0 {
+		ropts.SummaryFunc = nil
 	}
 	if ropts.FilterFunc != nil {
 		filters = append(filters, ropts.FilterFunc)

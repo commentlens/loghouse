@@ -10,11 +10,12 @@ type Reader interface {
 }
 
 type ReadOptions struct {
-	Labels     map[string]string
-	Start      time.Time
-	End        time.Time
-	FilterFunc func(LogEntry) bool
-	ResultFunc func(LogEntry)
+	Labels      map[string]string
+	Start       time.Time
+	End         time.Time
+	SummaryFunc func(LogSummary) bool
+	FilterFunc  func(LogEntry) bool
+	ResultFunc  func(LogEntry)
 }
 
 func MatchLabels(m, query map[string]string) bool {

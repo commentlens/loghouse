@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+type LogSummary struct {
+	Labels map[string]string
+	Start  time.Time
+	End    time.Time
+	Count  uint64
+}
+
 type LogEntry struct {
 	Labels map[string]string
 	Time   time.Time

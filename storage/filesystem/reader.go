@@ -97,6 +97,16 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 		return err
 	}
 	for _, hdr := range hdrs {
+		if opts.SummaryFunc != nil {
+			if !opts.SummaryFunc(storage.LogSummary{
+				Labels: hdr.Labels,
+				Start:  hdr.Start,
+				End:    hdr.End,
+				Count:  hdr.Count,
+			}) {
+				continue
+			}
+		}
 		err := func() error {
 			f, err := os.Open(chunk)
 			if err != nil {

@@ -128,11 +128,54 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
 				Start: start,
 				End:   end,
+				SummaryFunc: func(s storage.LogSummary) bool {
+					if s.Start.IsZero() && s.End.IsZero() {
+						return true
+					}
+					diff := s.End.Sub(s.Start)
+					if diff <= 0 {
+						return false
+					}
+					addCount := func(t time.Time, i time.Duration) {
+						if !(0 <= i && i < histogramSize) {
+							return
+						}
+						hs := start.Add(i * readStep)
+						he := start.Add((i + 1) * readStep)
+						if t.After(hs) {
+							hs = t
+						}
+						if t.Add(readStep).Before(he) {
+							he = t.Add(readStep)
+						}
+						if s.End.Before(he) {
+							he = s.End
+						}
+						hdiff := he.Sub(hs)
+						if hdiff <= 0 {
+							return
+						}
+						count := float64(s.Count)
+						scale := hdiff.Seconds() / diff.Seconds()
+						if scale < 1 {
+							count *= scale
+						}
+						mu[i].Lock()
+						histogram[i] += uint64(count)
+						mu[i].Unlock()
+					}
+					for t := s.Start; t.Before(s.End); t = t.Add(readStep) {
+						i := t.Sub(start) / readStep
+						addCount(t, i)
+						addCount(t, i+1)
+					}
+					return false
+				},
 				FilterFunc: func(e storage.LogEntry) bool {
 					i := e.Time.Sub(start) / readStep
 					mu[i].Lock()
-					defer mu[i].Unlock()
 					histogram[i] += 1
+					mu[i].Unlock()
 					return false
 				},
 				ResultFunc: func(e storage.LogEntry) {},

@@ -120,6 +120,7 @@ func compactChunks(chunks []string) error {
 				Start:       es[0].Time,
 				End:         es[len(es)-1].Time,
 				Compression: "s2",
+				Count:       uint64(len(es)),
 			})
 		}()
 		if err != nil {

@@ -24,6 +24,7 @@ const (
 	tlvTypeStart
 	tlvTypeEnd
 	tlvTypeCompression
+	tlvTypeCount
 )
 
 func readAll(val io.Reader) ([]byte, error) {

@@ -17,6 +17,7 @@ type Header struct {
 	Start       time.Time
 	End         time.Time
 	Compression string
+	Count       uint64
 }
 
 func MatchHeader(hdr *Header, opts *storage.ReadOptions) bool {
@@ -88,6 +89,12 @@ func encodeHeader(hdr *Header) ([]byte, error) {
 			return nil, err
 		}
 	}
+	if hdr.Count > 0 {
+		err := encodeUint64(buf, tlvTypeCount, hdr.Count)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return buf.Bytes(), nil
 }
 
@@ -139,6 +146,12 @@ func decodeHeader(val io.Reader) (*Header, error) {
 				return nil, err
 			}
 			hdr.Compression = s
+		case tlvTypeCount:
+			n, err := decodeUint64(val)
+			if err != nil {
+				return nil, err
+			}
+			hdr.Count = n
 		default:
 			return nil, ErrUnexpectedTLVType
 		}
