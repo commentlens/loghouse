@@ -26,6 +26,10 @@ func NewReader(r io.Reader) Reader {
 	}
 }
 
+const (
+	tlvReadBufferMaxSize = 1024 * 1024
+)
+
 type valuer io.LimitedReader
 
 type peeker interface {
@@ -41,8 +45,10 @@ func (v *valuer) Peek(n int) ([]byte, error) {
 }
 
 func (v *valuer) ReadAll() ([]byte, error) {
+	if v.N > tlvReadBufferMaxSize {
+		return io.ReadAll(v)
+	}
 	defer v.Skip()
-
 	return v.Peek(int(v.N))
 }
 

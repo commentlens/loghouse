@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,6 +21,7 @@ const (
 	CompactDir               = "data/compact"
 	CompactTmpFile           = "chunk.loghouse.tmp"
 	CompactHeaderFile        = "header.loghouse"
+	CompactIndexFile         = "index.loghouse"
 	CompactChunkMinAge       = 2 * time.Hour
 	CompactChunkMaxAge       = 8 * time.Hour
 	CompactChunkMinSize      = 1024 * 1024 * 50
@@ -56,6 +58,10 @@ func compact() error {
 		return err
 	}
 	err = removeOldChunk(CompactDir, CompactChunkRemoveAge)
+	if err != nil {
+		return err
+	}
+	err = buildIndex(CompactDir)
 	if err != nil {
 		return err
 	}
@@ -214,7 +220,7 @@ func removeEmptyDir(dir string, after time.Duration) error {
 		return err
 	}
 	for _, d := range ds {
-		func() error {
+		err := func() error {
 			if !d.IsDir() {
 				return nil
 			}
@@ -255,7 +261,7 @@ func removeOldChunk(dir string, after time.Duration) error {
 		return err
 	}
 	for _, d := range ds {
-		func() error {
+		err := func() error {
 			if !d.IsDir() {
 				return nil
 			}
@@ -271,6 +277,146 @@ func removeOldChunk(dir string, after time.Duration) error {
 		}()
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func buildIndex(dir string) error {
+	ds, err := osReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	var built bool
+	for _, d := range ds {
+		err := func() error {
+			if !d.IsDir() {
+				return nil
+			}
+			var hdrs []*chunkio.Header
+			err := func() error {
+				f, err := os.Open(fmt.Sprintf("%s/%s/%s", dir, d.Name(), CompactHeaderFile))
+				if err != nil {
+					if errors.Is(err, os.ErrNotExist) {
+						return nil
+					}
+					return err
+				}
+				defer f.Close()
+
+				buf := chunkio.NewBuffer()
+				defer chunkio.RecycleBuffer(buf)
+				buf.Reset(f)
+				for {
+					hdr, err := chunkio.ReadHeader(buf)
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							break
+						}
+						return err
+					}
+					hdrs = append(hdrs, hdr)
+				}
+				return nil
+			}()
+			if err != nil {
+				return err
+			}
+			indexFile := fmt.Sprintf("%s/%s/%s", dir, d.Name(), CompactIndexFile)
+
+			var indices []*chunkio.Index
+			err = func() error {
+				f, err := os.Open(indexFile)
+				if err != nil {
+					if errors.Is(err, os.ErrNotExist) {
+						return nil
+					}
+					return err
+				}
+				defer f.Close()
+
+				buf := chunkio.NewBuffer()
+				defer chunkio.RecycleBuffer(buf)
+				buf.Reset(f)
+				for {
+					index, err := chunkio.ReadIndex(buf)
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							break
+						}
+						return err
+					}
+					indices = append(indices, index)
+				}
+				return nil
+			}()
+			if err != nil {
+				return err
+			}
+			if len(indices) == len(hdrs) {
+				return nil
+			}
+			built = true
+			err = os.RemoveAll(indexFile)
+			if err != nil {
+				return err
+			}
+			for _, hdr := range hdrs {
+				var es []*storage.LogEntry
+				err := func() error {
+					f, err := os.Open(fmt.Sprintf("%s/%s/%s", dir, d.Name(), WriteChunkFile))
+					if err != nil {
+						return err
+					}
+					defer f.Close()
+
+					var r io.Reader = f
+					if hdr.Size > 0 {
+						r = io.NewSectionReader(f, int64(hdr.OffsetStart), int64(hdr.Size))
+					}
+					buf := chunkio.NewBuffer()
+					defer chunkio.RecycleBuffer(buf)
+					buf.Reset(r)
+					return chunkio.ReadData(context.Background(), hdr, buf, &storage.ReadOptions{
+						ResultFunc: func(e storage.LogEntry) {
+							es = append(es, &e)
+						},
+					})
+				}()
+				if err != nil {
+					return err
+				}
+				err = func() error {
+					var data [][]byte
+					for _, e := range es {
+						data = append(data, e.Data)
+					}
+					var index chunkio.Index
+					err = index.Build(data)
+					if err != nil {
+						return err
+					}
+					f, err := os.OpenFile(indexFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
+					if err != nil {
+						return err
+					}
+					defer f.Close()
+					return chunkio.WriteIndex(f, &index)
+				}()
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+		if built {
+			return nil
 		}
 	}
 	return nil

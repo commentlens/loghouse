@@ -86,9 +86,6 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 				}
 				return err
 			}
-			if !chunkio.MatchHeader(hdr, opts) {
-				continue
-			}
 			hdrs = append(hdrs, hdr)
 		}
 		return nil
@@ -96,7 +93,41 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 	if err != nil {
 		return err
 	}
-	for _, hdr := range hdrs {
+	var indices []*chunkio.Index
+	if len(opts.Contains) > 0 {
+		err := func() error {
+			f, err := os.Open(fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactIndexFile))
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					return nil
+				}
+				return err
+			}
+			defer f.Close()
+
+			buf := chunkio.NewBuffer()
+			defer chunkio.RecycleBuffer(buf)
+			buf.Reset(f)
+			for {
+				index, err := chunkio.ReadIndex(buf)
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+				indices = append(indices, index)
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+	}
+	for i, hdr := range hdrs {
+		if !chunkio.MatchHeader(hdr, opts) {
+			continue
+		}
 		if opts.SummaryFunc != nil {
 			if !opts.SummaryFunc(storage.LogSummary{
 				Labels: hdr.Labels,
@@ -104,6 +135,18 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 				End:    hdr.End,
 				Count:  hdr.Count,
 			}) {
+				continue
+			}
+		}
+		if len(opts.Contains) > 0 && len(hdrs) == len(indices) {
+			found := true
+			for _, s := range opts.Contains {
+				if !indices[i].Contains([]byte(s)) {
+					found = false
+					break
+				}
+			}
+			if !found {
 				continue
 			}
 		}

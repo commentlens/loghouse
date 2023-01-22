@@ -13,6 +13,7 @@ type ReadOptions struct {
 	Labels      map[string]string
 	Start       time.Time
 	End         time.Time
+	Contains    []string
 	SummaryFunc func(LogSummary) bool
 	FilterFunc  func(LogEntry) bool
 	ResultFunc  func(LogEntry)

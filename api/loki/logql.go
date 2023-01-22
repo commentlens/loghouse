@@ -21,6 +21,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 		return err
 	}
 	var filters []func(e storage.LogEntry) bool
+	var contains []string
 	err = logqlWalk(root, func(node bsr.BSR) error {
 		switch node.Label.Slot().NT {
 		case symbols.NT_LogSelectorMember:
@@ -86,6 +87,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				filters = append(filters, func(e storage.LogEntry) bool {
 					return bytes.Contains(e.Data, bVal)
 				})
+				contains = append(contains, val)
 			case "!=":
 				filters = append(filters, func(e storage.LogEntry) bool {
 					return !bytes.Contains(e.Data, bVal)
@@ -128,6 +130,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 					}
 					return v.String() == val
 				})
+				contains = append(contains, val)
 			case "!=":
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
@@ -217,6 +220,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 	}
 	if len(filters) > 0 {
 		ropts.SummaryFunc = nil
+		ropts.Contains = contains
 	}
 	if ropts.FilterFunc != nil {
 		filters = append(filters, ropts.FilterFunc)
