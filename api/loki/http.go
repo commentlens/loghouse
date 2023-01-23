@@ -125,7 +125,10 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 			histogramSize := end.Sub(start)/readStep + 1
 			histogram := make([]uint64, histogramSize)
 			mu := make([]sync.Mutex, histogramSize)
-			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
+			err := logqlRead(ctx, filesystem.NewCompactReader(&filesystem.CompactReaderOptions{
+				ReaderCount: ReadConcurrency,
+				Reverse:     false,
+			}), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				SummaryFunc: func(s storage.LogSummary) bool {
@@ -207,7 +210,10 @@ func (opts *ServerOptions) queryRange(rw http.ResponseWriter, r *http.Request, _
 		reverse := query.Get("direction") == "backward"
 		var es []storage.LogEntry
 		var mu sync.Mutex
-		err = logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, reverse), &storage.ReadOptions{
+		err = logqlRead(ctx, filesystem.NewCompactReader(&filesystem.CompactReaderOptions{
+			ReaderCount: ReadConcurrency,
+			Reverse:     reverse,
+		}), &storage.ReadOptions{
 			Start: start,
 			End:   end,
 			ResultFunc: func(e storage.LogEntry) {
@@ -313,7 +319,10 @@ func (opts *ServerOptions) tail(rw http.ResponseWriter, r *http.Request, _ httpr
 		for {
 			var es []storage.LogEntry
 			var mu sync.Mutex
-			err := logqlRead(ctx, filesystem.NewCompactReader(ReadConcurrency, false), &storage.ReadOptions{
+			err := logqlRead(ctx, filesystem.NewCompactReader(&filesystem.CompactReaderOptions{
+				ReaderCount: ReadConcurrency,
+				Reverse:     false,
+			}), &storage.ReadOptions{
 				Start: start,
 				End:   end,
 				ResultFunc: func(e storage.LogEntry) {

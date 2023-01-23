@@ -221,7 +221,10 @@ func TestCompactReadWriter(t *testing.T) {
 	err := w.Write(es)
 	require.NoError(t, err)
 
-	r := NewCompactReader(1, false)
+	r := NewCompactReader(&CompactReaderOptions{
+		ReaderCount: 1,
+		Reverse:     false,
+	})
 
 	var esReadBefore []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{

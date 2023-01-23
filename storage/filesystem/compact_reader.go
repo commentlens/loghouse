@@ -8,10 +8,15 @@ import (
 	"github.com/commentlens/loghouse/storage"
 )
 
-func NewCompactReader(readerCount int, reverse bool) storage.Reader {
+type CompactReaderOptions struct {
+	ReaderCount int
+	Reverse     bool
+}
+
+func NewCompactReader(opts *CompactReaderOptions) storage.Reader {
 	return &compactReader{
-		readerCount: readerCount,
-		reverse:     reverse,
+		readerCount: opts.ReaderCount,
+		reverse:     opts.Reverse,
 	}
 }
 
