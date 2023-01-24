@@ -28,19 +28,18 @@ const (
 	tlvTypeIndex
 )
 
-func readAll(val io.Reader) ([]byte, error) {
-	return val.(tlv.Valuer).ReadAll()
-}
-
 func encodeString(w io.Writer, typ uint64, s string) error {
 	return tlv.NewWriter(w).Write(typ, *(*[]byte)(unsafe.Pointer(&s)))
 }
 
 func decodeString(val io.Reader) (string, error) {
-	b, err := readAll(val)
+	buf := newBuffer()
+	defer recycleBuffer(buf)
+	_, err := buf.ReadFrom(val)
 	if err != nil {
 		return "", err
 	}
+	b := buf.Bytes()
 	return string(b), nil
 }
 
@@ -51,10 +50,13 @@ func encodeUint64(w io.Writer, typ uint64, n uint64) error {
 }
 
 func decodeUint64(val io.Reader) (uint64, error) {
-	b, err := readAll(val)
+	buf := newBuffer()
+	defer recycleBuffer(buf)
+	_, err := buf.ReadFrom(val)
 	if err != nil {
 		return 0, err
 	}
+	b := buf.Bytes()
 	return binary.BigEndian.Uint64(b), nil
 }
 

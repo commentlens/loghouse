@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/commentlens/loghouse/storage"
+	"github.com/sirupsen/logrus"
 )
 
 type CompactReaderOptions struct {
@@ -45,12 +46,18 @@ func (r *compactReader) read(ctx context.Context, chunks []string, opts *storage
 					nopts.ResultFunc = func(e storage.LogEntry) {
 						es = append(es, e)
 					}
-					cr.Read(ctx, &nopts)
+					err := cr.Read(ctx, &nopts)
+					if err != nil {
+						logrus.WithError(err).Error(chunk)
+					}
 					for i := len(es) - 1; i >= 0; i-- {
 						opts.ResultFunc(es[i])
 					}
 				} else {
-					cr.Read(ctx, opts)
+					err := cr.Read(ctx, opts)
+					if err != nil {
+						logrus.WithError(err).Error(chunk)
+					}
 				}
 			}
 		}()

@@ -190,6 +190,8 @@ func encodeIndex(index *Index) ([]byte, error) {
 
 func decodeIndex(val io.Reader) (*Index, error) {
 	var index Index
+	buf := newBuffer()
+	defer recycleBuffer(buf)
 	tr := tlv.NewReader(val)
 	for _, tv := range []struct {
 		length uint64
@@ -215,10 +217,12 @@ func decodeIndex(val io.Reader) (*Index, error) {
 		if typ != tv.length {
 			return nil, ErrUnexpectedTLVType
 		}
-		b, err := val.ReadAll()
+		buf.Reset()
+		_, err = buf.ReadFrom(val)
 		if err != nil {
 			return nil, err
 		}
+		b := buf.Bytes()
 		f, err := decodeFilter(b)
 		if err != nil {
 			return nil, err
@@ -277,6 +281,7 @@ func decodeFilter(b []byte) (*xorfilter.BinaryFuse8, error) {
 	f.SegmentLengthMask = binary.BigEndian.Uint32(b[12:16])
 	f.SegmentCount = binary.BigEndian.Uint32(b[16:20])
 	f.SegmentCountLength = binary.BigEndian.Uint32(b[20:24])
-	f.Fingerprints = b[24:]
+	f.Fingerprints = make([]byte, len(b[24:]))
+	copy(f.Fingerprints, b[24:])
 	return &f, nil
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/chunkio"
+	"github.com/commentlens/loghouse/storage/tlv"
 )
 
 func osReadDir(dir string) ([]os.DirEntry, error) {
@@ -93,35 +94,30 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 	if err != nil {
 		return err
 	}
-	var indices []*chunkio.Index
+	var indices []io.Reader
 	if len(opts.Contains) > 0 {
-		err := func() error {
-			f, err := os.Open(fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactIndexFile))
+		f, err := os.Open(fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactIndexFile))
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		defer f.Close()
+
+		buf := chunkio.NewBuffer()
+		defer chunkio.RecycleBuffer(buf)
+		buf.Reset(f)
+		tr := tlv.NewReader(buf)
+		for {
+			off, n, err := tr.ReadSection()
 			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					return nil
+				if errors.Is(err, io.EOF) {
+					break
 				}
 				return err
 			}
-			defer f.Close()
-
-			buf := chunkio.NewBuffer()
-			defer chunkio.RecycleBuffer(buf)
-			buf.Reset(f)
-			for {
-				index, err := chunkio.ReadIndex(buf)
-				if err != nil {
-					if errors.Is(err, io.EOF) {
-						break
-					}
-					return err
-				}
-				indices = append(indices, index)
-			}
-			return nil
-		}()
-		if err != nil {
-			return err
+			indices = append(indices, io.NewSectionReader(f, int64(off), int64(n)))
 		}
 	}
 	for i, hdr := range hdrs {
@@ -138,15 +134,12 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 				continue
 			}
 		}
-		if len(opts.Contains) > 0 && len(hdrs) == len(indices) {
-			found := true
-			for _, s := range opts.Contains {
-				if !indices[i].Contains([]byte(s)) {
-					found = false
-					break
-				}
+		if len(opts.Contains) > 0 {
+			ok, err := matchIndex(indices, i, opts)
+			if err != nil {
+				return err
 			}
-			if !found {
+			if !ok {
 				continue
 			}
 		}
@@ -171,6 +164,26 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 		}
 	}
 	return nil
+}
+
+func matchIndex(indices []io.Reader, i int, opts *storage.ReadOptions) (bool, error) {
+	if len(indices) <= i {
+		return false, fmt.Errorf("corrupted index")
+	}
+	buf := chunkio.NewBuffer()
+	defer chunkio.RecycleBuffer(buf)
+	buf.Reset(indices[i])
+
+	index, err := chunkio.ReadIndex(buf)
+	if err != nil {
+		return false, err
+	}
+	for _, s := range opts.Contains {
+		if !index.Contains([]byte(s)) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (r *reader) Read(ctx context.Context, opts *storage.ReadOptions) error {

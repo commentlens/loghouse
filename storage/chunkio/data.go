@@ -55,11 +55,10 @@ func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.Rea
 		s2r := newS2Reader()
 		defer recycleS2Reader(s2r)
 		s2r.Reset(val)
-		buf := NewBuffer()
-		defer RecycleBuffer(buf)
-		buf.Reset(s2r)
-		val = buf
+		val = s2r
 	}
+	buf := newBuffer()
+	defer recycleBuffer(buf)
 	tr := tlv.NewReader(val)
 	for {
 		typTime, valTime, err := tr.Read()
@@ -83,10 +82,12 @@ func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.Rea
 		if typStr != tlvTypeString {
 			return ErrUnexpectedTLVType
 		}
-		b, err := readAll(valStr)
+		buf.Reset()
+		_, err = buf.ReadFrom(valStr)
 		if err != nil {
 			return err
 		}
+		b := buf.Bytes()
 		e := storage.LogEntry{
 			Labels: hdr.Labels,
 			Time:   t,

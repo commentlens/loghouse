@@ -5,19 +5,15 @@ import (
 	"io"
 )
 
-type Valuer interface {
-	io.Reader
-	ReadAll() ([]byte, error)
-	Skip() error
-}
-
 type Reader interface {
-	Read() (uint64, Valuer, error)
+	Read() (uint64, io.Reader, error)
+	ReadSection() (uint64, uint64, error)
 }
 
 type reader struct {
-	r io.Reader
-	b [8]byte
+	r   io.Reader
+	b   [8]byte
+	off uint64
 }
 
 func NewReader(r io.Reader) Reader {
@@ -26,38 +22,7 @@ func NewReader(r io.Reader) Reader {
 	}
 }
 
-const (
-	tlvReadBufferMaxSize = 1024 * 1024
-)
-
-type valuer io.LimitedReader
-
-type peeker interface {
-	Peek(int) ([]byte, error)
-}
-
-func (v *valuer) Read(b []byte) (int, error) {
-	return (*io.LimitedReader)(v).Read(b)
-}
-
-func (v *valuer) Peek(n int) ([]byte, error) {
-	return v.R.(peeker).Peek(n)
-}
-
-func (v *valuer) ReadAll() ([]byte, error) {
-	if v.N > tlvReadBufferMaxSize {
-		return io.ReadAll(v)
-	}
-	defer v.Skip()
-	return v.Peek(int(v.N))
-}
-
-func (v *valuer) Skip() error {
-	_, err := io.Copy(io.Discard, v)
-	return err
-}
-
-func (r *reader) Read() (uint64, Valuer, error) {
+func (r *reader) Read() (uint64, io.Reader, error) {
 	typ, err := r.readUint64()
 	if err != nil {
 		return 0, nil, err
@@ -66,8 +31,26 @@ func (r *reader) Read() (uint64, Valuer, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	val := valuer(io.LimitedReader{R: r.r, N: int64(l)})
-	return typ, &val, nil
+	val := io.LimitReader(r.r, int64(l))
+	return typ, val, nil
+}
+
+func (r *reader) ReadSection() (uint64, uint64, error) {
+	off := r.off
+	_, err := r.readUint64()
+	if err != nil {
+		return 0, 0, err
+	}
+	l, err := r.readUint64()
+	if err != nil {
+		return 0, 0, err
+	}
+	_, err = io.CopyN(io.Discard, r.r, int64(l))
+	if err != nil {
+		return 0, 0, err
+	}
+	r.off += l
+	return off, r.off - off, nil
 }
 
 func (r *reader) readUint64() (uint64, error) {
@@ -75,7 +58,8 @@ func (r *reader) readUint64() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	var n int64
+	r.off += 1
+	var n uint64
 	switch r.b[0] {
 	case 0xFF:
 		n = 8
@@ -89,6 +73,7 @@ func (r *reader) readUint64() (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
+		r.off += n
 	}
 	switch n {
 	case 8:

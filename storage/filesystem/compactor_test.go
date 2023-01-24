@@ -259,4 +259,14 @@ func TestCompactReadWriter(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.ElementsMatch(t, es, esReadAfter)
+
+	var esReadContains []storage.LogEntry
+	err = r.Read(context.Background(), &storage.ReadOptions{
+		Contains: []string{`{`},
+		ResultFunc: func(e storage.LogEntry) {
+			esReadContains = append(esReadContains, e)
+		},
+	})
+	require.NoError(t, err)
+	require.ElementsMatch(t, es, esReadContains)
 }
