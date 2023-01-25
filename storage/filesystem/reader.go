@@ -30,7 +30,7 @@ func findFiles(dir, name string) ([]string, error) {
 
 type lessFunc func(int, int) bool
 
-func findSortFiles(dir, name string, f func([]os.DirEntry) (lessFunc, error)) ([]string, error) {
+func findSortFiles(dir, name string, f func([]os.DirEntry) lessFunc) ([]string, error) {
 	ds, err := osReadDir(dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -39,11 +39,7 @@ func findSortFiles(dir, name string, f func([]os.DirEntry) (lessFunc, error)) ([
 		return nil, err
 	}
 	if f != nil {
-		less, err := f(ds)
-		if err != nil {
-			return nil, err
-		}
-		sort.Slice(ds, less)
+		sort.Slice(ds, f(ds))
 	}
 	var paths []string
 	for _, d := range ds {
@@ -99,7 +95,7 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 		f, err := os.Open(fmt.Sprintf("%s/%s", filepath.Dir(chunk), CompactIndexFile))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return nil
+				goto MATCH_HEADER
 			}
 			return err
 		}
@@ -120,6 +116,7 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 			indices = append(indices, io.NewSectionReader(f, int64(off), int64(n)))
 		}
 	}
+MATCH_HEADER:
 	for i, hdr := range hdrs {
 		if !chunkio.MatchHeader(hdr, opts) {
 			continue
@@ -134,7 +131,7 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 				continue
 			}
 		}
-		if len(opts.Contains) > 0 {
+		if len(opts.Contains) > 0 && len(indices) > 0 {
 			ok, err := matchIndex(indices, i, opts)
 			if err != nil {
 				return err

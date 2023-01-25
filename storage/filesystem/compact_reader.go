@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"context"
+	"errors"
 	"os"
 	"sync"
 
@@ -47,16 +48,16 @@ func (r *compactReader) read(ctx context.Context, chunks []string, opts *storage
 						es = append(es, e)
 					}
 					err := cr.Read(ctx, &nopts)
-					if err != nil {
-						logrus.WithError(err).Error(chunk)
+					if err != nil && !errors.Is(err, context.Canceled) {
+						logrus.WithError(err).Warn(chunk)
 					}
 					for i := len(es) - 1; i >= 0; i-- {
 						opts.ResultFunc(es[i])
 					}
 				} else {
 					err := cr.Read(ctx, opts)
-					if err != nil {
-						logrus.WithError(err).Error(chunk)
+					if err != nil && !errors.Is(err, context.Canceled) {
+						logrus.WithError(err).Warn(chunk)
 					}
 				}
 			}
@@ -80,26 +81,29 @@ func (r *compactReader) Read(ctx context.Context, opts *storage.ReadOptions) err
 		dirs = []string{CompactDir, WriteDir}
 	}
 	for _, dir := range dirs {
-		chunks, err := findSortFiles(dir, WriteChunkFile, func(ds []os.DirEntry) (lessFunc, error) {
+		chunks, err := findSortFiles(dir, WriteChunkFile, func(ds []os.DirEntry) lessFunc {
+			defaultLessFunc := func() lessFunc {
+				if r.reverse {
+					return func(i, j int) bool { return ds[i].Name() > ds[j].Name() }
+				}
+				return func(i, j int) bool { return ds[i].Name() < ds[j].Name() }
+			}
 			switch dir {
 			case WriteDir:
 				var mts []int64
 				for _, d := range ds {
 					fi, err := d.Info()
 					if err != nil {
-						return nil, err
+						return defaultLessFunc()
 					}
 					mts = append(mts, fi.ModTime().UnixMilli())
 				}
 				if r.reverse {
-					return func(i, j int) bool { return mts[i] > mts[j] }, nil
+					return func(i, j int) bool { return mts[i] > mts[j] }
 				}
-				return func(i, j int) bool { return mts[i] < mts[j] }, nil
+				return func(i, j int) bool { return mts[i] < mts[j] }
 			default:
-				if r.reverse {
-					return func(i, j int) bool { return ds[i].Name() > ds[j].Name() }, nil
-				}
-				return func(i, j int) bool { return ds[i].Name() < ds[j].Name() }, nil
+				return defaultLessFunc()
 			}
 		})
 		if err != nil {

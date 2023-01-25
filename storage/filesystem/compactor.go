@@ -13,6 +13,7 @@ import (
 
 	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/chunkio"
+	"github.com/commentlens/loghouse/storage/tlv"
 	"github.com/djherbis/times"
 	"github.com/oklog/ulid/v2"
 )
@@ -58,6 +59,10 @@ func compact() error {
 		return err
 	}
 	err = removeOldChunk(CompactDir, CompactChunkRemoveAge)
+	if err != nil {
+		return err
+	}
+	err = rebuildIndex(CompactDir)
 	if err != nil {
 		return err
 	}
@@ -136,16 +141,8 @@ func compactChunks(chunks []string) error {
 		if bytesTotal < CompactChunkMaxSize {
 			continue
 		}
-		err = buildIndex(fmt.Sprintf("%s/%s", CompactDir, chunkID))
-		if err != nil {
-			return err
-		}
 		chunkID = ulid.Make().String()
 		bytesTotal = 0
-	}
-	err := buildIndex(fmt.Sprintf("%s/%s", CompactDir, chunkID))
-	if err != nil {
-		return err
 	}
 	return nil
 }
@@ -286,6 +283,26 @@ func removeOldChunk(dir string, after time.Duration) error {
 	return nil
 }
 
+func rebuildIndex(dir string) error {
+	ds, err := osReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	for _, d := range ds {
+		if !d.IsDir() {
+			return nil
+		}
+		err := buildIndex(fmt.Sprintf("%s/%s", dir, d.Name()))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func buildIndex(dir string) error {
 	var hdrs []*chunkio.Header
 	err := func() error {
@@ -318,7 +335,7 @@ func buildIndex(dir string) error {
 	}
 	indexFile := fmt.Sprintf("%s/%s", dir, CompactIndexFile)
 
-	var indices []*chunkio.Index
+	var indexCount uint64
 	err = func() error {
 		f, err := os.Open(indexFile)
 		if err != nil {
@@ -332,22 +349,23 @@ func buildIndex(dir string) error {
 		buf := chunkio.NewBuffer()
 		defer chunkio.RecycleBuffer(buf)
 		buf.Reset(f)
+		tr := tlv.NewReader(buf)
 		for {
-			index, err := chunkio.ReadIndex(buf)
+			_, _, err := tr.ReadSection()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
 				}
 				return err
 			}
-			indices = append(indices, index)
+			indexCount++
 		}
 		return nil
 	}()
 	if err != nil {
 		return err
 	}
-	if len(indices) == len(hdrs) {
+	if indexCount == uint64(len(hdrs)) {
 		return nil
 	}
 	err = os.RemoveAll(indexFile)
