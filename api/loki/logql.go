@@ -47,28 +47,28 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 					return v != val
 				})
 			case "=~":
+				re, err := regexp.Compile(val)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v, ok := e.Labels[key]
 					if !ok {
 						return false
 					}
-					ok, err := regexp.MatchString(val, v)
-					if err != nil {
-						return false
-					}
-					return ok
+					return re.MatchString(v)
 				})
 			case "!~":
+				re, err := regexp.Compile(val)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v, ok := e.Labels[key]
 					if !ok {
 						return false
 					}
-					ok, err := regexp.MatchString(val, v)
-					if err != nil {
-						return false
-					}
-					return !ok
+					return !re.MatchString(v)
 				})
 			}
 		case symbols.NT_LineFilter:
@@ -81,32 +81,33 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			if val == "" {
 				return nil
 			}
-			bVal := []byte(val)
 			switch op {
 			case "|=":
+				bVal := []byte(val)
 				filters = append(filters, func(e storage.LogEntry) bool {
 					return bytes.Contains(e.Data, bVal)
 				})
 				contains = append(contains, val)
 			case "!=":
+				bVal := []byte(val)
 				filters = append(filters, func(e storage.LogEntry) bool {
 					return !bytes.Contains(e.Data, bVal)
 				})
 			case "|~":
+				re, err := regexp.Compile(val)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
-					ok, err := regexp.Match(val, e.Data)
-					if err != nil {
-						return false
-					}
-					return ok
+					return re.Match(e.Data)
 				})
 			case "!~":
+				re, err := regexp.Compile(val)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
-					ok, err := regexp.Match(val, e.Data)
-					if err != nil {
-						return false
-					}
-					return !ok
+					return !re.Match(e.Data)
 				})
 			}
 		case symbols.NT_DataFilter:
@@ -140,76 +141,76 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 					return v.String() != val
 				})
 			case "=~":
+				re, err := regexp.Compile(val)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
 						return false
 					}
-					ok, err := regexp.MatchString(val, v.String())
-					if err != nil {
-						return false
-					}
-					return ok
+					return re.MatchString(v.String())
 				})
 			case "!~":
+				re, err := regexp.Compile(val)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
 						return false
 					}
-					ok, err := regexp.MatchString(val, v.String())
-					if err != nil {
-						return false
-					}
-					return !ok
+					return !re.MatchString(v.String())
 				})
 			case ">=":
+				fVal, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
 						return false
 					}
-					fval, err := strconv.ParseFloat(val, 64)
-					if err != nil {
-						return false
-					}
-					return v.Float() >= fval
+					return v.Float() >= fVal
 				})
 			case ">":
+				fVal, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
 						return false
 					}
-					fval, err := strconv.ParseFloat(val, 64)
-					if err != nil {
-						return false
-					}
-					return v.Float() > fval
+					return v.Float() > fVal
 				})
 			case "<=":
+				fVal, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
 						return false
 					}
-					fval, err := strconv.ParseFloat(val, 64)
-					if err != nil {
-						return false
-					}
-					return v.Float() <= fval
+					return v.Float() <= fVal
 				})
 			case "<":
+				fVal, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
 						return false
 					}
-					fval, err := strconv.ParseFloat(val, 64)
-					if err != nil {
-						return false
-					}
-					return v.Float() < fval
+					return v.Float() < fVal
 				})
 			}
 		}
