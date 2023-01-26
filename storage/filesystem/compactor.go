@@ -304,9 +304,11 @@ func rebuildIndex(dir string) error {
 }
 
 func buildIndex(dir string) error {
-	var hdrs []*chunkio.Header
+	headerFile := fmt.Sprintf("%s/%s", dir, CompactHeaderFile)
+
+	var headerCount uint64
 	err := func() error {
-		f, err := os.Open(fmt.Sprintf("%s/%s", dir, CompactHeaderFile))
+		f, err := os.Open(headerFile)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return nil
@@ -318,21 +320,23 @@ func buildIndex(dir string) error {
 		buf := chunkio.NewBuffer()
 		defer chunkio.RecycleBuffer(buf)
 		buf.Reset(f)
+		tr := tlv.NewReader(buf)
 		for {
-			hdr, err := chunkio.ReadHeader(buf)
+			_, _, err := tr.ReadSection()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
 				}
 				return err
 			}
-			hdrs = append(hdrs, hdr)
+			headerCount++
 		}
 		return nil
 	}()
 	if err != nil {
 		return err
 	}
+
 	indexFile := fmt.Sprintf("%s/%s", dir, CompactIndexFile)
 
 	var indexCount uint64
@@ -365,10 +369,39 @@ func buildIndex(dir string) error {
 	if err != nil {
 		return err
 	}
-	if indexCount == uint64(len(hdrs)) {
+	if indexCount == headerCount {
 		return nil
 	}
 	err = os.RemoveAll(indexFile)
+	if err != nil {
+		return err
+	}
+	var hdrs []*chunkio.Header
+	err = func() error {
+		f, err := os.Open(headerFile)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		defer f.Close()
+
+		buf := chunkio.NewBuffer()
+		defer chunkio.RecycleBuffer(buf)
+		buf.Reset(f)
+		for {
+			hdr, err := chunkio.ReadHeader(buf)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				return err
+			}
+			hdrs = append(hdrs, hdr)
+		}
+		return nil
+	}()
 	if err != nil {
 		return err
 	}
