@@ -163,9 +163,13 @@ MATCH_HEADER:
 	return nil
 }
 
+var (
+	errCorruptedIndex = errors.New("corrupted index")
+)
+
 func matchIndex(indices []io.Reader, i int, opts *storage.ReadOptions) (bool, error) {
 	if len(indices) <= i {
-		return false, fmt.Errorf("corrupted index")
+		return false, errCorruptedIndex
 	}
 	buf := chunkio.NewBuffer()
 	defer chunkio.RecycleBuffer(buf)
@@ -176,7 +180,7 @@ func matchIndex(indices []io.Reader, i int, opts *storage.ReadOptions) (bool, er
 		return false, err
 	}
 	for _, s := range opts.Contains {
-		if !index.Contains([]byte(s)) {
+		if !index.Contains(s) {
 			return false, nil
 		}
 	}

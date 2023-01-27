@@ -2,56 +2,56 @@ package chunkio
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
-	"hash/fnv"
 	"io"
 	"runtime"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/FastFilter/xorfilter"
+	"github.com/cespare/xxhash/v2"
 	"github.com/commentlens/loghouse/storage/tlv"
-	"golang.org/x/sync/errgroup"
+)
+
+const (
+	indexMaxNgramLength = 5
+	indexBuildBatchSize = 1000
 )
 
 type Index struct {
-	L1 *xorfilter.BinaryFuse8
-	L3 *xorfilter.BinaryFuse8
-	L5 *xorfilter.BinaryFuse8
+	filter *xorfilter.BinaryFuse8
+}
+
+func hashRunes(b []byte, length int, m map[uint64]struct{}) {
+	offs := make([]int, length)
+	var ptr int
+	var ok bool
+	hash := func(end int) {
+		if ptr == 0 && end > 0 {
+			ok = true
+		}
+		start := offs[ptr]
+		offs[ptr] = end
+		ptr = (ptr + 1) % len(offs)
+		if !ok {
+			return
+		}
+		m[xxhash.Sum64(b[start:end])] = struct{}{}
+	}
+	for i, c := range b {
+		if utf8.RuneStart(c) {
+			hash(i)
+		}
+	}
+	hash(len(b))
 }
 
 func (index *Index) Build(data [][]byte) error {
-	g, _ := errgroup.WithContext(context.Background())
-	for _, tv := range []struct {
-		length int
-		filter **xorfilter.BinaryFuse8
-	}{
-		{
-			length: 5,
-			filter: &index.L5,
-		},
-		{
-			length: 3,
-			filter: &index.L3,
-		},
-		{
-			length: 1,
-			filter: &index.L1,
-		},
-	} {
-		tv := tv
-		g.Go(func() error {
-			return index.build(tv.length, tv.filter, data)
-		})
-	}
-	return g.Wait()
-}
-
-func (index *Index) build(length int, f **xorfilter.BinaryFuse8, data [][]byte) error {
-	chIn := make(chan [][]byte)
-	chOut := make(chan map[uint64]struct{})
+	workerCount := runtime.NumCPU()
+	chIn := make(chan [][]byte, workerCount)
+	chOut := make(chan map[uint64]struct{}, workerCount)
 	var wg sync.WaitGroup
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 
 		go func() {
@@ -59,11 +59,8 @@ func (index *Index) build(length int, f **xorfilter.BinaryFuse8, data [][]byte) 
 			for data := range chIn {
 				m := make(map[uint64]struct{})
 				for _, b := range data {
-					rs := []rune(string(b))
-					for i := 0; i < len(rs)-length+1; i++ {
-						h := fnv.New64a()
-						h.Write([]byte(string(rs[i : i+length])))
-						m[h.Sum64()] = struct{}{}
+					for length := 1; length <= indexMaxNgramLength; length++ {
+						hashRunes(b, length, m)
 					}
 				}
 				chOut <- m
@@ -71,9 +68,8 @@ func (index *Index) build(length int, f **xorfilter.BinaryFuse8, data [][]byte) 
 		}()
 	}
 	go func() {
-		batchSize := 1000
-		for i := 0; i < len(data); i += batchSize {
-			j := i + batchSize
+		for i := 0; i < len(data); i += indexBuildBatchSize {
+			j := i + indexBuildBatchSize
 			if j > len(data) {
 				j = len(data)
 			}
@@ -93,45 +89,28 @@ func (index *Index) build(length int, f **xorfilter.BinaryFuse8, data [][]byte) 
 	for k := range m {
 		keys = append(keys, k)
 	}
-	nf, err := xorfilter.PopulateBinaryFuse8(keys)
+	f, err := xorfilter.PopulateBinaryFuse8(keys)
 	if err != nil {
 		return err
 	}
-	*f = nf
+	index.filter = f
 	return nil
 }
 
-func (index *Index) Contains(b []byte) bool {
-	rs := []rune(string(b))
-	for _, tv := range []struct {
-		length int
-		filter *xorfilter.BinaryFuse8
-	}{
-		{
-			length: 5,
-			filter: index.L5,
-		},
-		{
-			length: 3,
-			filter: index.L3,
-		},
-		{
-			length: 1,
-			filter: index.L1,
-		},
-	} {
-		if len(rs) >= tv.length {
-			for i := 0; i < len(rs)-tv.length+1; i++ {
-				h := fnv.New64a()
-				h.Write([]byte(string(rs[i : i+tv.length])))
-				if !tv.filter.Contains(h.Sum64()) {
-					return false
-				}
-			}
-			return true
+func (index *Index) Contains(s string) bool {
+	b := []byte(s)
+	length := utf8.RuneCount(b)
+	if length > indexMaxNgramLength {
+		length = indexMaxNgramLength
+	}
+	m := make(map[uint64]struct{})
+	hashRunes(b, length, m)
+	for key := range m {
+		if !index.filter.Contains(key) {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func WriteIndex(w io.Writer, index *Index) error {
@@ -156,80 +135,22 @@ func ReadIndex(r io.Reader) (*Index, error) {
 }
 
 func encodeIndex(index *Index) ([]byte, error) {
-	buf := new(bytes.Buffer)
-
-	tw := tlv.NewWriter(buf)
-	for _, tv := range []struct {
-		length uint64
-		filter *xorfilter.BinaryFuse8
-	}{
-		{
-			length: 1,
-			filter: index.L1,
-		},
-		{
-			length: 3,
-			filter: index.L3,
-		},
-		{
-			length: 5,
-			filter: index.L5,
-		},
-	} {
-		b, err := encodeFilter(tv.filter)
-		if err != nil {
-			return nil, err
-		}
-		err = tw.Write(tv.length, b)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return buf.Bytes(), nil
+	return encodeFilter(index.filter)
 }
 
 func decodeIndex(val io.Reader) (*Index, error) {
-	var index Index
 	buf := newBuffer()
 	defer recycleBuffer(buf)
-	tr := tlv.NewReader(val)
-	for _, tv := range []struct {
-		length uint64
-		filter **xorfilter.BinaryFuse8
-	}{
-		{
-			length: 1,
-			filter: &index.L1,
-		},
-		{
-			length: 3,
-			filter: &index.L3,
-		},
-		{
-			length: 5,
-			filter: &index.L5,
-		},
-	} {
-		typ, val, err := tr.Read()
-		if err != nil {
-			return nil, err
-		}
-		if typ != tv.length {
-			return nil, ErrUnexpectedTLVType
-		}
-		buf.Reset()
-		_, err = buf.ReadFrom(val)
-		if err != nil {
-			return nil, err
-		}
-		b := buf.Bytes()
-		f, err := decodeFilter(b)
-		if err != nil {
-			return nil, err
-		}
-		*tv.filter = f
+
+	_, err := buf.ReadFrom(val)
+	if err != nil {
+		return nil, err
 	}
-	return &index, nil
+	f, err := decodeFilter(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	return &Index{filter: f}, nil
 }
 
 func encodeFilter(f *xorfilter.BinaryFuse8) ([]byte, error) {

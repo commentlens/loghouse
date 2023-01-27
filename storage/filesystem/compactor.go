@@ -295,15 +295,18 @@ func rebuildIndex(dir string) error {
 		if !d.IsDir() {
 			return nil
 		}
-		err := buildIndex(fmt.Sprintf("%s/%s", dir, d.Name()))
+		ok, err := buildIndex(fmt.Sprintf("%s/%s", dir, d.Name()))
 		if err != nil {
 			return err
+		}
+		if ok {
+			return nil
 		}
 	}
 	return nil
 }
 
-func buildIndex(dir string) error {
+func buildIndex(dir string) (bool, error) {
 	headerFile := fmt.Sprintf("%s/%s", dir, CompactHeaderFile)
 
 	var headerCount uint64
@@ -334,7 +337,7 @@ func buildIndex(dir string) error {
 		return nil
 	}()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	indexFile := fmt.Sprintf("%s/%s", dir, CompactIndexFile)
@@ -367,14 +370,14 @@ func buildIndex(dir string) error {
 		return nil
 	}()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if indexCount == headerCount {
-		return nil
+		return false, nil
 	}
 	err = os.RemoveAll(indexFile)
 	if err != nil {
-		return err
+		return false, err
 	}
 	var hdrs []*chunkio.Header
 	err = func() error {
@@ -403,7 +406,7 @@ func buildIndex(dir string) error {
 		return nil
 	}()
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, hdr := range hdrs {
 		var es []*storage.LogEntry
@@ -425,7 +428,7 @@ func buildIndex(dir string) error {
 			})
 		}()
 		if err != nil {
-			return err
+			return false, err
 		}
 		err = func() error {
 			var data [][]byte
@@ -445,8 +448,8 @@ func buildIndex(dir string) error {
 			return chunkio.WriteIndex(f, &index)
 		}()
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
-	return nil
+	return true, nil
 }

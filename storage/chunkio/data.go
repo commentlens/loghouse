@@ -50,6 +50,8 @@ func encodeData(es []storage.LogEntry, compress bool) ([]byte, error) {
 }
 
 func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.ReadOptions) error {
+	buf := newBuffer()
+	defer recycleBuffer(buf)
 	switch hdr.Compression {
 	case "s2":
 		s2r := newS2Reader()
@@ -57,8 +59,6 @@ func ReadData(ctx context.Context, hdr *Header, val io.Reader, opts *storage.Rea
 		s2r.Reset(val)
 		val = s2r
 	}
-	buf := newBuffer()
-	defer recycleBuffer(buf)
 	tr := tlv.NewReader(val)
 	for {
 		typTime, valTime, err := tr.Read()
