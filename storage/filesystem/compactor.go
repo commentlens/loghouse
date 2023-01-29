@@ -14,7 +14,6 @@ import (
 	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/chunkio"
 	"github.com/commentlens/loghouse/storage/tlv"
-	"github.com/djherbis/times"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -25,8 +24,8 @@ const (
 	CompactIndexFile         = "index.loghouse"
 	CompactChunkMinAge       = 2 * time.Hour
 	CompactChunkMaxAge       = 8 * time.Hour
-	CompactChunkMinSize      = 1024 * 1024 * 25
-	CompactChunkMaxSize      = 1024 * 1024 * 100
+	CompactChunkMinSize      = 1024 * 1024 * 10
+	CompactChunkMaxSize      = 1024 * 1024 * 40
 	CompactEmptyDirRemoveAge = time.Minute
 	CompactChunkRemoveAge    = 31 * 24 * time.Hour
 )
@@ -159,13 +158,21 @@ func chunkCompactible(chunk string) (uint8, error) {
 	if fsize >= CompactChunkMinSize {
 		return 1, nil
 	}
-	t, err := times.Stat(chunk)
-	if err != nil {
-		return 0, err
-	}
 	age := time.Since(fi.ModTime())
-	if t.HasBirthTime() {
-		age = time.Since(t.BirthTime())
+	r := NewReader([]string{chunk})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err = r.Read(ctx, &storage.ReadOptions{
+		ResultFunc: func(e storage.LogEntry) {
+			ageFirst := time.Since(e.Time)
+			if ageFirst > age {
+				age = ageFirst
+			}
+			cancel()
+		},
+	})
+	if err != nil && !errors.Is(err, context.Canceled) {
+		return 0, err
 	}
 	if age >= CompactChunkMaxAge {
 		return 2, nil
