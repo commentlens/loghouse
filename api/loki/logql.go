@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"regexp/syntax"
+	"sort"
 	"strconv"
 
 	"github.com/commentlens/loghouse/api/loki/logql/lexer"
@@ -101,6 +103,11 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				filters = append(filters, func(e storage.LogEntry) bool {
 					return re.Match(e.Data)
 				})
+				litVals, err := regexpExtractLiterals(val)
+				if err != nil {
+					return err
+				}
+				contains = append(contains, litVals...)
 			case "!~":
 				re, err := regexp.Compile(val)
 				if err != nil {
@@ -116,6 +123,11 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			if err != nil {
 				return err
 			}
+			litKeys, err := gjsonExtractLiterals(key)
+			if err != nil {
+				return err
+			}
+			contains = append(contains, litKeys...)
 			op := node.GetNTChildI(2).GetTChildI(0).LiteralString()
 			val := node.GetTChildI(3).LiteralString()
 			val, err = logqlUnquote(val)
@@ -152,6 +164,11 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 					}
 					return re.MatchString(v.String())
 				})
+				litVals, err := regexpExtractLiterals(val)
+				if err != nil {
+					return err
+				}
+				contains = append(contains, litVals...)
 			case "!~":
 				re, err := regexp.Compile(val)
 				if err != nil {
@@ -287,4 +304,82 @@ func logqlIsHistogram(query string) (bool, error) {
 		return nil
 	})
 	return isHistogram, nil
+}
+
+func gjsonExtractLiterals(s string) ([]string, error) {
+	root, err := syntax.Parse(s, syntax.POSIX)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[string]struct{})
+	isNumber := func(s string) bool {
+		for _, r := range s {
+			if !('0' <= r && r <= '9') {
+				return false
+			}
+		}
+		return true
+	}
+	f := func(re *syntax.Regexp) {
+		if re.Op != syntax.OpLiteral {
+			return
+		}
+		part := string(re.Rune)
+		if part == "" {
+			return
+		}
+		if part == "#" {
+			return
+		}
+		if isNumber(part) {
+			return
+		}
+		m[part] = struct{}{}
+	}
+	var walk func(re *syntax.Regexp)
+	walk = func(re *syntax.Regexp) {
+		f(re)
+		for _, sub := range re.Sub {
+			walk(sub)
+		}
+	}
+	walk(root)
+	var lits []string
+	for k := range m {
+		lits = append(lits, k)
+	}
+	sort.Strings(lits)
+	return lits, nil
+}
+
+func regexpExtractLiterals(s string) ([]string, error) {
+	root, err := syntax.Parse(s, 0)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[string]struct{})
+	f := func(re *syntax.Regexp) {
+		if re.Op != syntax.OpLiteral {
+			return
+		}
+		part := string(re.Rune)
+		if part == "" {
+			return
+		}
+		m[part] = struct{}{}
+	}
+	var walk func(re *syntax.Regexp)
+	walk = func(re *syntax.Regexp) {
+		f(re)
+		for _, sub := range re.Sub {
+			walk(sub)
+		}
+	}
+	walk(root)
+	var lits []string
+	for k := range m {
+		lits = append(lits, k)
+	}
+	sort.Strings(lits)
+	return lits, nil
 }
