@@ -25,8 +25,8 @@ const (
 	CompactIndexFile         = "index.loghouse"
 	CompactChunkMinAge       = 2 * time.Hour
 	CompactChunkMaxAge       = 8 * time.Hour
-	CompactChunkMinSize      = 1024 * 1024 * 50
-	CompactChunkMaxSize      = 1024 * 1024 * 200
+	CompactChunkMinSize      = 1024 * 1024 * 25
+	CompactChunkMaxSize      = 1024 * 1024 * 100
 	CompactEmptyDirRemoveAge = time.Minute
 	CompactChunkRemoveAge    = 31 * 24 * time.Hour
 )
@@ -320,10 +320,7 @@ func buildIndex(dir string) (bool, error) {
 		}
 		defer f.Close()
 
-		buf := chunkio.NewBuffer()
-		defer chunkio.RecycleBuffer(buf)
-		buf.Reset(f)
-		tr := tlv.NewReader(buf)
+		tr := tlv.NewReader(f)
 		for {
 			_, _, err := tr.ReadSection()
 			if err != nil {
@@ -353,10 +350,7 @@ func buildIndex(dir string) (bool, error) {
 		}
 		defer f.Close()
 
-		buf := chunkio.NewBuffer()
-		defer chunkio.RecycleBuffer(buf)
-		buf.Reset(f)
-		tr := tlv.NewReader(buf)
+		tr := tlv.NewReader(f)
 		for {
 			_, _, err := tr.ReadSection()
 			if err != nil {

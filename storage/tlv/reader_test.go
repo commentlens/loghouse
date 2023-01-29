@@ -1,7 +1,9 @@
 package tlv
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 
@@ -33,6 +35,36 @@ func TestReader(t *testing.T) {
 		valBuf := new(bytes.Buffer)
 		io.Copy(valBuf, val)
 		require.Equal(t, test.val, valBuf.Bytes())
+	}
+}
+
+func TestReadSection(t *testing.T) {
+	for _, test := range []struct {
+		in  []byte
+		off []uint64
+		n   []uint64
+	}{
+		{
+			in:  []byte{1, 0, 1, 1, 2},
+			off: []uint64{0, 2},
+			n:   []uint64{2, 3},
+		},
+	} {
+		for _, rr := range []io.Reader{
+			io.ReadSeeker(bytes.NewReader(test.in)),
+			bufio.NewReader(bytes.NewReader(test.in)),
+		} {
+			r := NewReader(rr)
+			for i := 0; ; i++ {
+				off, n, err := r.ReadSection()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				require.NoError(t, err)
+				require.Equal(t, test.off[i], off)
+				require.Equal(t, test.n[i], n)
+			}
+		}
 	}
 }
 

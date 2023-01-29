@@ -1,6 +1,7 @@
 package tlv
 
 import (
+	"bufio"
 	"encoding/binary"
 	"io"
 )
@@ -45,9 +46,22 @@ func (r *reader) ReadSection() (uint64, uint64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	_, err = io.CopyN(io.Discard, r.r, int64(l))
-	if err != nil {
-		return 0, 0, err
+	switch rr := r.r.(type) {
+	case io.Seeker:
+		_, err := rr.Seek(int64(l), io.SeekCurrent)
+		if err != nil {
+			return 0, 0, err
+		}
+	case *bufio.Reader:
+		_, err := rr.Discard(int(l))
+		if err != nil {
+			return 0, 0, err
+		}
+	default:
+		_, err := io.CopyN(io.Discard, r.r, int64(l))
+		if err != nil {
+			return 0, 0, err
+		}
 	}
 	r.off += l
 	return off, r.off - off, nil

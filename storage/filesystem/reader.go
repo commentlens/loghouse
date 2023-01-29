@@ -101,10 +101,7 @@ func (r *reader) read(ctx context.Context, chunk string, opts *storage.ReadOptio
 		}
 		defer f.Close()
 
-		buf := chunkio.NewBuffer()
-		defer chunkio.RecycleBuffer(buf)
-		buf.Reset(f)
-		tr := tlv.NewReader(buf)
+		tr := tlv.NewReader(f)
 		for {
 			off, n, err := tr.ReadSection()
 			if err != nil {
