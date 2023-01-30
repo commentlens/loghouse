@@ -159,21 +159,6 @@ func chunkCompactible(chunk string) (uint8, error) {
 		return 1, nil
 	}
 	age := time.Since(fi.ModTime())
-	r := NewReader([]string{chunk})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	err = r.Read(ctx, &storage.ReadOptions{
-		ResultFunc: func(e storage.LogEntry) {
-			ageFirst := time.Since(e.Time)
-			if ageFirst > age {
-				age = ageFirst
-			}
-			cancel()
-		},
-	})
-	if err != nil && !errors.Is(err, context.Canceled) {
-		return 0, err
-	}
 	if age >= CompactChunkMaxAge {
 		return 2, nil
 	}

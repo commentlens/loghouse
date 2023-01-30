@@ -91,6 +91,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 				contains = append(contains, val)
 			case "!=":
+				// negate
 				bVal := []byte(val)
 				filters = append(filters, func(e storage.LogEntry) bool {
 					return !bytes.Contains(e.Data, bVal)
@@ -109,6 +110,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				}
 				contains = append(contains, litVals...)
 			case "!~":
+				// negate
 				re, err := regexp.Compile(val)
 				if err != nil {
 					return err
@@ -123,17 +125,17 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			if err != nil {
 				return err
 			}
-			litKeys, err := gjsonExtractLiterals(key)
-			if err != nil {
-				return err
-			}
-			contains = append(contains, litKeys...)
 			op := node.GetNTChildI(2).GetTChildI(0).LiteralString()
 			val := node.GetTChildI(3).LiteralString()
 			val, err = logqlUnquote(val)
 			if err != nil {
 				return err
 			}
+			litKeys, err := gjsonExtractLiterals(key)
+			if err != nil {
+				return err
+			}
+			contains = append(contains, litKeys...)
 			switch op {
 			case "=":
 				filters = append(filters, func(e storage.LogEntry) bool {
@@ -145,6 +147,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				})
 				contains = append(contains, val)
 			case "!=":
+				// negate
 				filters = append(filters, func(e storage.LogEntry) bool {
 					v := gjson.GetBytes(e.Data, key)
 					if !v.Exists() {
@@ -170,6 +173,7 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				}
 				contains = append(contains, litVals...)
 			case "!~":
+				// negate
 				re, err := regexp.Compile(val)
 				if err != nil {
 					return err
