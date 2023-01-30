@@ -59,6 +59,7 @@ func (index *Index) Build(data [][]byte) error {
 			for data := range chIn {
 				m := make(map[uint64]struct{})
 				for _, b := range data {
+					b := bytes.ToLower(b)
 					for length := 1; length <= indexMaxNgramLength; length++ {
 						hashRunes(b, length, m)
 					}
@@ -98,7 +99,7 @@ func (index *Index) Build(data [][]byte) error {
 }
 
 func (index *Index) Contains(s string) bool {
-	b := []byte(s)
+	b := bytes.ToLower([]byte(s))
 	length := utf8.RuneCount(b)
 	if length > indexMaxNgramLength {
 		length = indexMaxNgramLength
