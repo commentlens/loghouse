@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	indexMaxNgramLength = 5
+	indexMaxNgramLength = 8
 	indexBuildBatchSize = 1000
 )
 
