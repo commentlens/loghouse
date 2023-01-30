@@ -324,25 +324,37 @@ func gjsonExtractLiterals(s string) ([]string, error) {
 		}
 		return true
 	}
-	f := func(re *syntax.Regexp) {
-		if re.Op != syntax.OpLiteral {
-			return
+	f := func(re *syntax.Regexp) bool {
+		switch re.Op {
+		case syntax.OpStar, syntax.OpQuest:
+			return false
+		case syntax.OpRepeat:
+			if re.Min == 0 {
+				return false
+			}
+		case syntax.OpLiteral:
+		default:
+			return true
 		}
 		part := string(re.Rune)
 		if part == "" {
-			return
+			return true
 		}
 		if part == "#" {
-			return
+			return true
 		}
 		if isNumber(part) {
-			return
+			return true
 		}
 		m[part] = struct{}{}
+		return true
 	}
 	var walk func(re *syntax.Regexp)
 	walk = func(re *syntax.Regexp) {
-		f(re)
+		ok := f(re)
+		if !ok {
+			return
+		}
 		for _, sub := range re.Sub {
 			walk(sub)
 		}
@@ -357,24 +369,36 @@ func gjsonExtractLiterals(s string) ([]string, error) {
 }
 
 func regexpExtractLiterals(s string) ([]string, error) {
-	root, err := syntax.Parse(s, 0)
+	root, err := syntax.Parse(s, syntax.Perl)
 	if err != nil {
 		return nil, err
 	}
 	m := make(map[string]struct{})
-	f := func(re *syntax.Regexp) {
-		if re.Op != syntax.OpLiteral {
-			return
+	f := func(re *syntax.Regexp) bool {
+		switch re.Op {
+		case syntax.OpStar, syntax.OpQuest:
+			return false
+		case syntax.OpRepeat:
+			if re.Min == 0 {
+				return false
+			}
+		case syntax.OpLiteral:
+		default:
+			return true
 		}
 		part := string(re.Rune)
 		if part == "" {
-			return
+			return true
 		}
 		m[part] = struct{}{}
+		return true
 	}
 	var walk func(re *syntax.Regexp)
 	walk = func(re *syntax.Regexp) {
-		f(re)
+		ok := f(re)
+		if !ok {
+			return
+		}
 		for _, sub := range re.Sub {
 			walk(sub)
 		}
