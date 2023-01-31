@@ -49,24 +49,27 @@ func hashRunes(b []byte, length int, m map[uint64]struct{}) {
 func (index *Index) Build(data [][]byte) error {
 	workerCount := runtime.NumCPU()
 	chIn := make(chan [][]byte, workerCount)
-	chOut := make(chan map[uint64]struct{}, workerCount)
+	wm := make([]map[uint64]struct{}, workerCount)
+	for i := 0; i < workerCount; i++ {
+		wm[i] = make(map[uint64]struct{})
+	}
 	var wg sync.WaitGroup
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 
-		go func() {
+		go func(workerID int) {
 			defer wg.Done()
+
+			m := wm[workerID]
 			for data := range chIn {
-				m := make(map[uint64]struct{})
 				for _, b := range data {
 					b := bytes.ToLower(b)
 					for length := 1; length <= indexMaxNgramLength; length++ {
 						hashRunes(b, length, m)
 					}
 				}
-				chOut <- m
 			}
-		}()
+		}(i)
 	}
 	go func() {
 		for i := 0; i < len(data); i += indexBuildBatchSize {
@@ -77,11 +80,10 @@ func (index *Index) Build(data [][]byte) error {
 			chIn <- data[i:j]
 		}
 		close(chIn)
-		wg.Wait()
-		close(chOut)
 	}()
+	wg.Wait()
 	m := make(map[uint64]struct{})
-	for m2 := range chOut {
+	for _, m2 := range wm {
 		for key := range m2 {
 			m[key] = struct{}{}
 		}
