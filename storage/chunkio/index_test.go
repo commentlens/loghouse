@@ -29,6 +29,21 @@ func TestHashRunes(t *testing.T) {
 			length: 1,
 			want:   []string{"1", "2", "3", "4", "5"},
 		},
+		{
+			in:     "123",
+			length: 3,
+			want:   []string{"123"},
+		},
+		{
+			in:     "123",
+			length: 5,
+			want:   []string{},
+		},
+		{
+			in:     "",
+			length: 5,
+			want:   []string{},
+		},
 	} {
 		got := make(map[uint64]struct{})
 		hashRunes([]byte(test.in), test.length, got)

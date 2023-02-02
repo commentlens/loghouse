@@ -8,6 +8,7 @@ import (
 	"regexp/syntax"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/commentlens/loghouse/api/loki/logql/lexer"
 	"github.com/commentlens/loghouse/api/loki/logql/parser"
@@ -83,26 +84,77 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			if val == "" {
 				return nil
 			}
+			valQuoted := logqlQuote(val)
+			parseRequired := strings.ContainsAny(val, `:,{}[]"`)
 			switch op {
 			case "|=":
-				bVal := []byte(val)
+				valQuoted := []byte(valQuoted)
 				filters = append(filters, func(e storage.LogEntry) bool {
-					return bytes.Contains(e.Data, bVal)
+					if !bytes.Contains(e.Data, valQuoted) {
+						return false
+					}
+					if !parseRequired {
+						return true
+					}
+					ts, err := e.Data.Values()
+					if err != nil {
+						return false
+					}
+					for _, t := range ts {
+						if strings.Contains(t, val) {
+							return true
+						}
+					}
+					return false
 				})
 				contains = append(contains, val)
 			case "!=":
 				// negate
-				bVal := []byte(val)
+				valQuoted := []byte(valQuoted)
 				filters = append(filters, func(e storage.LogEntry) bool {
-					return !bytes.Contains(e.Data, bVal)
+					if bytes.Contains(e.Data, valQuoted) {
+						return false
+					}
+					if !parseRequired {
+						return true
+					}
+					ts, err := e.Data.Values()
+					if err != nil {
+						return false
+					}
+					for _, t := range ts {
+						if strings.Contains(t, val) {
+							return false
+						}
+					}
+					return true
 				})
 			case "|~":
 				re, err := regexp.Compile(val)
 				if err != nil {
 					return err
 				}
+				reQuoted, err := regexp.Compile(valQuoted)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
-					return re.Match(e.Data)
+					if !reQuoted.Match(e.Data) {
+						return false
+					}
+					if !parseRequired {
+						return true
+					}
+					ts, err := e.Data.Values()
+					if err != nil {
+						return false
+					}
+					for _, t := range ts {
+						if re.MatchString(t) {
+							return true
+						}
+					}
+					return false
 				})
 				litVals, err := regexpExtractLiterals(val)
 				if err != nil {
@@ -115,8 +167,27 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				if err != nil {
 					return err
 				}
+				reQuoted, err := regexp.Compile(valQuoted)
+				if err != nil {
+					return err
+				}
 				filters = append(filters, func(e storage.LogEntry) bool {
-					return !re.Match(e.Data)
+					if reQuoted.Match(e.Data) {
+						return false
+					}
+					if !parseRequired {
+						return true
+					}
+					ts, err := e.Data.Values()
+					if err != nil {
+						return false
+					}
+					for _, t := range ts {
+						if re.MatchString(t) {
+							return false
+						}
+					}
+					return true
 				})
 			}
 		case symbols.NT_DataFilter:
@@ -268,6 +339,11 @@ func logqlParse(query string) (bsr.BSR, error) {
 		return bsr.BSR{}, fmt.Errorf("logql: ambiguous query %q", query)
 	}
 	return q.GetRoot(), nil
+}
+
+func logqlQuote(s string) string {
+	raw := strconv.Quote(s)
+	return raw[1 : len(raw)-1]
 }
 
 func logqlUnquote(s string) (string, error) {

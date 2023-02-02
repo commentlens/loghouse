@@ -10,12 +10,13 @@ import (
 
 	"github.com/FastFilter/xorfilter"
 	"github.com/cespare/xxhash/v2"
+	"github.com/commentlens/loghouse/storage"
 	"github.com/commentlens/loghouse/storage/tlv"
 )
 
 const (
-	indexMaxNgramLength = 8
-	indexBuildBatchSize = 1000
+	indexMaxNgramLength = 6
+	indexBuildBatchSize = 100
 )
 
 type Index struct {
@@ -62,10 +63,21 @@ func (index *Index) Build(data [][]byte) error {
 
 			m := wm[workerID]
 			for data := range chIn {
-				for _, b := range data {
-					b := bytes.ToLower(b)
-					for length := 1; length <= indexMaxNgramLength; length++ {
-						hashRunes(b, length, m)
+				for _, jsonb := range data {
+					d := storage.LogEntryData(jsonb)
+					ts, err := d.Values()
+					if err != nil {
+						return
+					}
+					for _, t := range ts {
+						b := bytes.ToLower([]byte(t))
+						maxLength := utf8.RuneCount(b)
+						if maxLength > indexMaxNgramLength {
+							maxLength = indexMaxNgramLength
+						}
+						for length := 1; length <= maxLength; length++ {
+							hashRunes(b, length, m)
+						}
 					}
 				}
 			}

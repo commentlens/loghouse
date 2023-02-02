@@ -262,7 +262,7 @@ func TestCompactReadWriter(t *testing.T) {
 
 	var esReadContains []storage.LogEntry
 	err = r.Read(context.Background(), &storage.ReadOptions{
-		Contains: []string{`{`},
+		Contains: []string{`test`},
 		ResultFunc: func(e storage.LogEntry) {
 			esReadContains = append(esReadContains, e)
 		},

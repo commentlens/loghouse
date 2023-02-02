@@ -395,7 +395,7 @@ func buildIndex(dir string) (bool, error) {
 		return false, err
 	}
 	for _, hdr := range hdrs {
-		var es []*storage.LogEntry
+		var data [][]byte
 		err := func() error {
 			f, err := os.Open(fmt.Sprintf("%s/%s", dir, WriteChunkFile))
 			if err != nil {
@@ -409,7 +409,7 @@ func buildIndex(dir string) (bool, error) {
 			buf.Reset(r)
 			return chunkio.ReadData(context.Background(), hdr, buf, &storage.ReadOptions{
 				ResultFunc: func(e storage.LogEntry) {
-					es = append(es, &e)
+					data = append(data, e.Data)
 				},
 			})
 		}()
@@ -417,10 +417,6 @@ func buildIndex(dir string) (bool, error) {
 			return false, err
 		}
 		err = func() error {
-			var data [][]byte
-			for _, e := range es {
-				data = append(data, e.Data)
-			}
 			var index chunkio.Index
 			err = index.Build(data)
 			if err != nil {
