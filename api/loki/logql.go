@@ -84,17 +84,13 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 			if val == "" {
 				return nil
 			}
-			valQuoted := logqlQuote(val)
-			parseRequired := strings.ContainsAny(val, `:,{}[]"`)
+			parseRequired := strings.ContainsAny(val, `:,{}[]"`) || val != logqlQuote(val)
 			switch op {
 			case "|=":
-				valQuoted := []byte(valQuoted)
+				bVal := []byte(val)
 				filters = append(filters, func(e storage.LogEntry) bool {
-					if !bytes.Contains(e.Data, valQuoted) {
-						return false
-					}
 					if !parseRequired {
-						return true
+						return bytes.Contains(e.Data, bVal)
 					}
 					ts, err := e.Data.Values()
 					if err != nil {
@@ -110,13 +106,10 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				contains = append(contains, val)
 			case "!=":
 				// negate
-				valQuoted := []byte(valQuoted)
+				bVal := []byte(val)
 				filters = append(filters, func(e storage.LogEntry) bool {
-					if bytes.Contains(e.Data, valQuoted) {
-						return false
-					}
 					if !parseRequired {
-						return true
+						return !bytes.Contains(e.Data, bVal)
 					}
 					ts, err := e.Data.Values()
 					if err != nil {
@@ -134,16 +127,9 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				if err != nil {
 					return err
 				}
-				reQuoted, err := regexp.Compile(valQuoted)
-				if err != nil {
-					return err
-				}
 				filters = append(filters, func(e storage.LogEntry) bool {
-					if !reQuoted.Match(e.Data) {
-						return false
-					}
 					if !parseRequired {
-						return true
+						return re.Match(e.Data)
 					}
 					ts, err := e.Data.Values()
 					if err != nil {
@@ -167,16 +153,9 @@ func logqlRead(ctx context.Context, r storage.Reader, ropts *storage.ReadOptions
 				if err != nil {
 					return err
 				}
-				reQuoted, err := regexp.Compile(valQuoted)
-				if err != nil {
-					return err
-				}
 				filters = append(filters, func(e storage.LogEntry) bool {
-					if reQuoted.Match(e.Data) {
-						return false
-					}
 					if !parseRequired {
-						return true
+						return !re.Match(e.Data)
 					}
 					ts, err := e.Data.Values()
 					if err != nil {

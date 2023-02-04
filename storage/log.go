@@ -51,7 +51,11 @@ func (m *LogEntryData) Values() ([]string, error) {
 		case gjson.False:
 			tm[v.Raw] = struct{}{}
 		case gjson.String:
-			tm[v.Str] = struct{}{}
+			if gjson.Valid(v.Str) {
+				gjson.Parse(v.Str).ForEach(itr)
+			} else {
+				tm[v.Str] = struct{}{}
+			}
 		case gjson.Number:
 			tm[v.Raw] = struct{}{}
 		case gjson.Null:

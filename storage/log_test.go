@@ -36,6 +36,10 @@ func TestLogEntryDataValues(t *testing.T) {
 			in:   `{"k":{"k":3}}`,
 			want: []string{"3", "k"},
 		},
+		{
+			in:   `{"k":"{\"comment\":\"Declined because I am out of office\",\"responseStatus\":\"declined\",\"self\":true}"}`,
+			want: []string{"Declined because I am out of office", "comment", "declined", "k", "responseStatus", "self", "true"},
+		},
 	} {
 		d := LogEntryData(test.in)
 		got, err := d.Values()
